@@ -4,9 +4,9 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from ..config import Config
 

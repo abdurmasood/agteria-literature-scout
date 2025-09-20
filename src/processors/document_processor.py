@@ -8,9 +8,9 @@ from datetime import datetime
 from pathlib import Path
 import requests
 
-from langchain.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 from langchain_community.document_loaders import ArxivLoader, UnstructuredPDFLoader
 
 from ..config import Config

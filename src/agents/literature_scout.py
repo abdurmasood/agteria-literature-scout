@@ -7,10 +7,10 @@ from datetime import datetime
 
 from langchain.agents import AgentType, AgentExecutor, create_react_agent
 from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.callbacks import FileCallbackHandler
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from ..config import Config, AGTERIA_KEYWORDS, CROSS_DOMAIN_KEYWORDS
 from ..tools.search_tools import create_langchain_search_tools
@@ -92,7 +92,7 @@ class LiteratureScout:
     
     def _create_memory_tools(self) -> List:
         """Create tools for interacting with memory."""
-        from langchain.tools import Tool
+        from langchain_core.tools import Tool
         
         def search_memory_func(query: str) -> str:
             """Search stored papers in memory."""

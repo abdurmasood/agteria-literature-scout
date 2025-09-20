@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import arxiv
 import requests
 from Bio import Entrez
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 from langchain_community.tools import ArxivQueryRun
 from langchain_community.utilities import ArxivAPIWrapper
 from langchain_community.tools import PubmedQueryRun

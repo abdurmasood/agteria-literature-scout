@@ -9,9 +9,9 @@ from pathlib import Path
 
 import chromadb
 from chromadb.config import Settings
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
+from langchain_chroma import Chroma
 
 from ..config import Config
 from ..processors.document_processor import DuplicateDetector, ContentValidator

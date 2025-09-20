@@ -121,3 +121,5 @@ dmypy.json
 api_keys.txt
 secrets.json
 config.local.py
+
+CLAUDE.md
