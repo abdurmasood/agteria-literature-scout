@@ -106,8 +106,6 @@ analysis = scout.analyze_breakthrough_potential(
 )
 ```
 
----
-
 ## Architecture
 
 ```
