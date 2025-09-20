@@ -1,5 +1,12 @@
-# 🔬 Agteria Literature Scout
-
+  
+  <picture>
+    <!-- <source srcset="./banner-dark.png" media="(prefers-color-scheme: dark)"> -->
+    <source srcset="./banner.png" media="(prefers-color-scheme: light)">
+    <img src="./banner.png" alt="Agteria Background">
+  </picture>
+  <h2 align="center">
+    Agteria Literature Scout
+  </h2>
 <p align="center">
   <strong>Intelligent Literature Discovery for Climate Technology</strong>
 </p>
@@ -8,88 +15,43 @@
   <img src="https://img.shields.io/badge/Python-3.8+-blue.svg" alt="Python Version">
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/Status-Beta-orange.svg" alt="Status">
-  <img src="https://img.shields.io/badge/Climate%20Tech-🌱-brightgreen.svg" alt="Climate Tech">
 </p>
 
+## About the Project
 An AI-powered research assistant designed to accelerate the discovery of novel methane reduction solutions through automated literature analysis, cross-domain hypothesis generation, and breakthrough identification.
 
----
+## Features
 
-## 🚀 Features
-
-### 🔍 **Intelligent Literature Search**
+### Intelligent Literature Search
 - **Multi-Database Integration**: Searches ArXiv, PubMed, and web sources simultaneously
 - **Semantic Search**: Uses AI embeddings for context-aware paper discovery
 - **Cross-Domain Discovery**: Finds unexpected connections across research fields
 - **Real-time Monitoring**: Automated daily scans for new publications
 
-### 🧠 **Advanced Analysis**
+### Advanced Analysis
 - **Paper Analysis**: Extracts key findings, methodologies, and molecular targets
 - **Hypothesis Generation**: Creates novel, testable research hypotheses
 - **Breakthrough Assessment**: Evaluates commercial and technical potential
 - **Gap Identification**: Discovers unexplored research opportunities
 
-### 💾 **Persistent Memory**
+### Persistent Memory
 - **Vector Database**: ChromaDB for semantic paper storage and retrieval
 - **Knowledge Graph**: Tracks concepts and relationships across papers
 - **Duplicate Detection**: Prevents redundant analysis
 - **Quality Scoring**: Ranks papers by relevance and reliability
 
-### 📊 **Comprehensive Reporting**
+### Comprehensive Reporting
 - **Daily Digests**: Automated research summaries
 - **Hypothesis Reports**: Prioritized research directions
 - **Competitive Intelligence**: Competitor research tracking
 - **Trend Analysis**: Research momentum and topic evolution
 
-### 🖥️ **Multiple Interfaces**
+### Multiple Interfaces
 - **Command Line Interface**: Full-featured CLI for power users
 - **Web Interface**: Streamlit-based dashboard with visualizations
 - **Interactive Mode**: Conversational research assistant
 
----
-
-## 🎯 Quick Start
-
-### Prerequisites
-- Python 3.8+
-- OpenAI API key (required)
-- Serper API key (optional, for enhanced web search)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/agteria-literature-scout.git
-cd agteria-literature-scout
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements_simple.txt
-
-# Setup environment
-cp .env.template .env
-# Edit .env file with your API keys
-```
-
-### Quick Test
-
-```bash
-# Test basic functionality
-python test_arxiv.py
-
-# Check system status
-python main.py status
-
-# Start web interface
-streamlit run app.py
-```
-
----
-
-## 🔧 Usage Examples
+## Usage Examples
 
 ### Command Line Interface
 
@@ -146,7 +108,7 @@ analysis = scout.analyze_breakthrough_potential(
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 agteria-literature-scout/
@@ -164,14 +126,14 @@ agteria-literature-scout/
 
 ### Core Components
 
-- **🤖 Literature Scout Agent**: ReAct framework for reasoning and tool orchestration
-- **🔧 Tool Ecosystem**: Search, analysis, and hypothesis generation tools
-- **💾 Memory System**: ChromaDB vector storage with semantic search
-- **📊 Report Generation**: Automated insights and trend analysis
+- **Literature Scout Agent**: ReAct framework for reasoning and tool orchestration
+- **Tool Ecosystem**: Search, analysis, and hypothesis generation tools
+- **Memory System**: ChromaDB vector storage with semantic search
+- **Report Generation**: Automated insights and trend analysis
 
 ---
 
-## 🎛️ Configuration
+## Configuration
 
 ### Environment Variables (.env)
 
@@ -204,9 +166,7 @@ AGTERIA_KEYWORDS = [
 ]
 ```
 
----
-
-## 📈 Expected Impact
+## Expected Impact
 
 This system should:
 - **Reduce literature review time by 70-80%**
@@ -216,9 +176,7 @@ This system should:
 - **Generate hypotheses** for breakthrough innovations
 - **Identify collaboration opportunities** across domains
 
----
-
-## 🔬 Research Capabilities
+## Research Capabilities
 
 ### Daily Research Workflow
 1. **Morning Scan**: Automated discovery of new papers
@@ -232,24 +190,7 @@ This system should:
 - **Pharmaceuticals → Feed Additives**: "Can drug delivery methods improve feed additive efficacy?"
 - **Materials Science → Livestock**: "How can nanotechnology enhance methane inhibitors?"
 
----
-
-## 🧪 Testing
-
-```bash
-# Quick functionality test
-python test_system.py quick
-
-# Full system validation
-python test_system.py
-
-# Test specific components
-python test_arxiv.py
-```
-
----
-
-## 📊 Example Results
+## Example Results
 
 ### Recent Discoveries
 - Found 15 novel methane inhibitor papers in last scan
@@ -260,83 +201,14 @@ python test_arxiv.py
 ### Sample Hypothesis
 *"Based on deep-sea bacterial methane processing mechanisms, we hypothesize that targeting specific archaeal enzymes with marine-derived inhibitors could reduce livestock methane emissions by 30-50% while maintaining feed efficiency."*
 
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-```bash
-# Install development dependencies
-pip install -r requirements.txt
-
-# Run tests
-python test_system.py
-
-# Format code
-black src/
-```
-
----
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-## 🆘 Support
-
-- 📖 **Documentation**: Check the [Wiki](https://github.com/your-username/agteria-literature-scout/wiki)
-- 🐛 **Bug Reports**: [Open an issue](https://github.com/your-username/agteria-literature-scout/issues)
-- 💡 **Feature Requests**: [Discussion board](https://github.com/your-username/agteria-literature-scout/discussions)
-- 📧 **Contact**: [Your email or contact method]
-
----
-
-## 🎯 Roadmap
-
-### Current (v1.0)
-- ✅ Multi-database search integration
-- ✅ AI-powered paper analysis
-- ✅ Hypothesis generation
-- ✅ Web and CLI interfaces
-
-### Upcoming (v1.1)
-- 🔄 Enhanced NLP for molecular extraction
-- 🔄 Interactive knowledge graph visualization
-- 🔄 API integration with laboratory systems
-- 🔄 Mobile-responsive interface
-
-### Future (v2.0)
-- 🔮 Predictive research trend analysis
-- 🔮 Automated experiment design suggestions
-- 🔮 Integration with patent databases
-- 🔮 Multi-language support
-
----
-
-## 🌟 Acknowledgments
+## Acknowledgments
 
 - **Agteria Biotech** for the vision and mission
 - **LangChain** for the agent framework
 - **OpenAI** for the language model capabilities
 - **ArXiv & PubMed** for scientific literature access
 - **Open Source Community** for the foundational tools
-
----
-
-<p align="center">
-  <strong>🔬 Accelerating Climate Technology Discovery</strong><br>
-  <em>Built to support Agteria Biotech's mission to reduce global greenhouse gas emissions</em>
-</p>
-
----
-
-## ⭐ Star This Repository
-
-If you find this project useful, please consider giving it a star! It helps others discover the project and supports continued development.
-
-[![Star this repository](https://img.shields.io/github/stars/your-username/agteria-literature-scout?style=social)](https://github.com/your-username/agteria-literature-scout/stargazers)
