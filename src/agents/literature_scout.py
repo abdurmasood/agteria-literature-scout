@@ -189,7 +189,11 @@ RESEARCH APPROACH:
 1. SEARCH STRATEGY: Use multiple databases (ArXiv, PubMed, Web) to ensure comprehensive coverage
 2. ANALYSIS DEPTH: Thoroughly analyze papers for novel mechanisms, molecules, and methodologies
 3. CROSS-DOMAIN THINKING: Actively look for connections between different research fields
-4. HYPOTHESIS GENERATION: Generate creative but scientifically grounded research hypotheses with source attribution
+4. HYPOTHESIS GENERATION: After analyzing papers, use hypothesis generation tools:
+   - Use 'cross_domain_hypotheses' tool with format: 'Domain1: findings1 | Domain2: findings2'
+   - Use 'analogical_hypotheses' tool with format: 'source_mechanism | source_domain'
+   - Use 'creative_ideation' tool for breakthrough ideas
+   - Use 'research_gap_analysis' tool with format: 'research_area | existing_approaches | limitations'
 5. MEMORY UTILIZATION: Check memory to avoid duplicate work and build on previous discoveries
 6. SOURCE TRACKING: Pay attention to Paper IDs returned by search tools and reference them in your analysis
 
@@ -534,9 +538,7 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
         paper_ids = paper_ids_from_response if paper_ids_from_response else all_paper_ids
         sources = self._get_sources_for_ids(paper_ids)
         
-        # Extract insights with source attribution
-        insights_with_sources = self._extract_insights_with_sources(agent_response)
-        hypotheses_with_sources = self._extract_hypotheses_with_sources(agent_response)
+        # Extract insights
         
         return {
             "query": query,
@@ -548,10 +550,8 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
             "novel_insights": self._extract_novel_insights(agent_response),
             "hypotheses": self._extract_hypotheses(agent_response),
             "next_steps": self._extract_next_steps(agent_response),
-            # New source attribution fields
+            # Source attribution fields
             "sources": sources,
-            "insights_with_sources": insights_with_sources,
-            "hypotheses_with_sources": hypotheses_with_sources,
             "paper_ids_referenced": paper_ids,
             "bibliography": self._generate_bibliography(sources)
         }
@@ -709,76 +709,6 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
         
         logger.info(f"Retrieved {len(sources)} sources for {len(paper_ids)} paper IDs")
         return sources
-    
-    def _extract_insights_with_sources(self, response: str) -> List[Dict[str, Any]]:
-        """Extract insights with their source citations from the response."""
-        import re
-        
-        insights_with_sources = []
-        
-        # Find insights that have citations
-        # Pattern: insight text [Paper ID: title] or [ID: id]
-        insight_pattern = r'([^.\n]+?)\s*\[(?:Paper )?ID:\s*([^\]]+?)\]([^.\n]*)'
-        matches = re.findall(insight_pattern, response, re.IGNORECASE | re.DOTALL)
-        
-        for before_text, paper_id, after_text in matches:
-            # Clean up the insight text
-            insight_text = (before_text + after_text).strip()
-            
-            # Extract just the ID part
-            clean_id = paper_id.split(':')[0].strip()
-            
-            # Skip if this looks like it's part of a larger sentence structure
-            if len(insight_text) > 20 and not insight_text.lower().startswith(('the', 'a', 'an', 'this', 'that')):
-                insights_with_sources.append({
-                    "insight": insight_text,
-                    "source_ids": [clean_id],
-                    "confidence": "medium",
-                    "insight_type": "discovery"
-                })
-        
-        logger.info(f"Extracted {len(insights_with_sources)} insights with sources")
-        return insights_with_sources
-    
-    def _extract_hypotheses_with_sources(self, response: str) -> List[Dict[str, Any]]:
-        """Extract hypotheses with their source citations from the response."""
-        import re
-        
-        hypotheses_with_sources = []
-        
-        # Look for hypothesis sections or hypothesis keywords with citations
-        hypothesis_keywords = ['hypothesis', 'hypothesize', 'propose', 'suggest', 'predict', 'theorize']
-        
-        # Split response into sentences
-        sentences = re.split(r'[.!?]\s+', response)
-        
-        for sentence in sentences:
-            sentence = sentence.strip()
-            
-            # Check if sentence contains hypothesis keywords and citations
-            has_hypothesis_keyword = any(keyword in sentence.lower() for keyword in hypothesis_keywords)
-            has_citation = re.search(r'\[(?:Paper )?ID:\s*([^\]]+?)\]', sentence, re.IGNORECASE)
-            
-            if has_hypothesis_keyword and has_citation and len(sentence) > 30:
-                # Extract paper IDs from this sentence
-                paper_ids = []
-                id_matches = re.findall(r'\[(?:Paper )?ID:\s*([^\]]+?)\]', sentence, re.IGNORECASE)
-                for match in id_matches:
-                    clean_id = match.split(':')[0].strip()
-                    paper_ids.append(clean_id)
-                
-                # Clean the hypothesis text (remove citations for readability)
-                clean_hypothesis = re.sub(r'\[(?:Paper )?ID:\s*[^\]]+?\]', '', sentence).strip()
-                
-                hypotheses_with_sources.append({
-                    "hypothesis": clean_hypothesis,
-                    "source_ids": paper_ids,
-                    "confidence": "medium",
-                    "insight_type": "hypothesis"
-                })
-        
-        logger.info(f"Extracted {len(hypotheses_with_sources)} hypotheses with sources")
-        return hypotheses_with_sources
     
     def _generate_bibliography(self, sources: List[Dict[str, Any]]) -> str:
         """Generate formatted bibliography from sources."""

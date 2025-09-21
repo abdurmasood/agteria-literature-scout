@@ -443,7 +443,7 @@ def create_langchain_search_tools() -> List[Tool]:
                     "title": item.get("title", ""),
                     "authors": [],
                     "abstract": item.get("snippet", ""),
-                    "url": item.get("link", ""),
+                    "url": item.get("url", ""),
                     "database": "web"
                 }
                 paper_id = citation_tracker.add_source(paper_data)
