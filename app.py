@@ -52,6 +52,7 @@ st.markdown("""
         border-radius: 5px;
         border-left: 4px solid #1f77b4;
         margin: 1rem 0;
+        color: #333333;
     }
     .hypothesis-box {
         background: #e8f4fd;
@@ -59,6 +60,7 @@ st.markdown("""
         border-radius: 5px;
         border-left: 4px solid #17a2b8;
         margin: 1rem 0;
+        color: #333333;
     }
     .success-box {
         background: #d4edda;
@@ -66,6 +68,7 @@ st.markdown("""
         border-radius: 5px;
         border-left: 4px solid #28a745;
         margin: 1rem 0;
+        color: #333333;
     }
     .warning-box {
         background: #fff3cd;
@@ -73,6 +76,7 @@ st.markdown("""
         border-radius: 5px;
         border-left: 4px solid #ffc107;
         margin: 1rem 0;
+        color: #333333;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -214,7 +218,7 @@ def research_page():
                 })
                 
                 # Display results
-                display_research_results(result)
+                display_research_results(result, 0)
                 
             except Exception as e:
                 st.error(f"❌ Research failed: {e}")
@@ -225,9 +229,9 @@ def research_page():
         
         for i, item in enumerate(reversed(st.session_state.research_history[-5:]), 1):
             with st.expander(f"{item['timestamp'].strftime('%Y-%m-%d %H:%M')} - {item['query'][:50]}..."):
-                display_research_results(item['result'])
+                display_research_results(item['result'], i)
 
-def display_research_results(result: Dict[str, Any]):
+def display_research_results(result: Dict[str, Any], index: int = 0):
     """Display research results in a structured format."""
     
     # Summary metrics
@@ -265,7 +269,7 @@ def display_research_results(result: Dict[str, Any]):
             st.markdown(f"{i}. {step}")
     
     # Download results
-    if st.button("💾 Download Results", key=f"download_{id(result)}"):
+    if st.button("💾 Download Results", key=f"download_{index}"):
         json_str = json.dumps(result, indent=2, default=str)
         st.download_button(
             label="📥 Download JSON",
@@ -316,7 +320,7 @@ def daily_scan_page():
                 st.session_state.last_scan_results = scan_results
                 
                 # Display scan results
-                display_scan_results(scan_results, generate_report)
+                display_scan_results(scan_results, generate_report, index=1)
                 
             except Exception as e:
                 st.error(f"❌ Daily scan failed: {e}")
@@ -325,9 +329,9 @@ def daily_scan_page():
     if st.session_state.last_scan_results:
         st.markdown("---")
         st.markdown("## 📊 Latest Scan Results")
-        display_scan_results(st.session_state.last_scan_results, show_generate_button=False)
+        display_scan_results(st.session_state.last_scan_results, show_generate_button=False, index=2)
 
-def display_scan_results(scan_results: Dict[str, Any], generate_report: bool = False, show_generate_button: bool = True):
+def display_scan_results(scan_results: Dict[str, Any], generate_report: bool = False, show_generate_button: bool = True, index: int = 0):
     """Display daily scan results."""
     
     # Summary
@@ -362,7 +366,7 @@ def display_scan_results(scan_results: Dict[str, Any], generate_report: bool = F
     
     # Generate report
     if (generate_report or show_generate_button) and st.session_state.report_generator:
-        if st.button("📄 Generate Detailed Report", key=f"report_{id(scan_results)}"):
+        if st.button("📄 Generate Detailed Report", key=f"report_{index}"):
             with st.spinner("Generating report..."):
                 try:
                     report_path = st.session_state.report_generator.generate_daily_digest(scan_results)
