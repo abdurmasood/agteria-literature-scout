@@ -50,16 +50,6 @@ An AI-powered research assistant designed to accelerate the discovery of novel m
 - **Web Interface**: Streamlit-based dashboard with visualizations
 - **Interactive Mode**: Conversational research assistant
 
-## Expected Impact
-
-This system should:
-- **Reduce literature review time by 70-80%**
-- **Increase research coverage by 10x**
-- **Discover novel research directions** you might miss manually
-- **Monitor competitors** and market developments automatically
-- **Generate hypotheses** for breakthrough innovations
-- **Identify collaboration opportunities** across domains
-
 ## Research Capabilities
 
 ### Daily Research Workflow
@@ -73,6 +63,16 @@ This system should:
 - **Marine Biology → Agriculture**: "How do algae enzyme systems work in ruminants?"
 - **Pharmaceuticals → Feed Additives**: "Can drug delivery methods improve feed additive efficacy?"
 - **Materials Science → Livestock**: "How can nanotechnology enhance methane inhibitors?"
+
+## Expected Impact
+
+This system should:
+- **Reduce literature review time by 70-80%**
+- **Increase research coverage by 10x**
+- **Discover novel research directions** you might miss manually
+- **Monitor competitors** and market developments automatically
+- **Generate hypotheses** for breakthrough innovations
+- **Identify collaboration opportunities** across domains
 
 ## Example Results
 
