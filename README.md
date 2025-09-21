@@ -1,4 +1,3 @@
-  
   <picture>
     <!-- <source srcset="./banner-dark.png" media="(prefers-color-scheme: dark)"> -->
     <source srcset="./banner.png" media="(prefers-color-scheme: light)">
@@ -50,6 +49,41 @@ An AI-powered research assistant designed to accelerate the discovery of novel m
 - **Command Line Interface**: Full-featured CLI for power users
 - **Web Interface**: Streamlit-based dashboard with visualizations
 - **Interactive Mode**: Conversational research assistant
+
+## Expected Impact
+
+This system should:
+- **Reduce literature review time by 70-80%**
+- **Increase research coverage by 10x**
+- **Discover novel research directions** you might miss manually
+- **Monitor competitors** and market developments automatically
+- **Generate hypotheses** for breakthrough innovations
+- **Identify collaboration opportunities** across domains
+
+## Research Capabilities
+
+### Daily Research Workflow
+1. **Morning Scan**: Automated discovery of new papers
+2. **Analysis**: AI extracts key findings and methodologies
+3. **Hypothesis Generation**: Creates novel research directions
+4. **Report**: Summarized insights delivered via dashboard
+5. **Memory Update**: Papers stored for future reference
+
+### Cross-Domain Innovation Examples
+- **Marine Biology → Agriculture**: "How do algae enzyme systems work in ruminants?"
+- **Pharmaceuticals → Feed Additives**: "Can drug delivery methods improve feed additive efficacy?"
+- **Materials Science → Livestock**: "How can nanotechnology enhance methane inhibitors?"
+
+## Example Results
+
+### Recent Discoveries
+- Found 15 novel methane inhibitor papers in last scan
+- Identified 3 cross-domain opportunities from marine biology
+- Generated 8 testable hypotheses for enzyme targets
+- Tracked 12 competitor research developments
+
+### Sample Hypothesis
+*"Based on deep-sea bacterial methane processing mechanisms, we hypothesize that targeting specific archaeal enzymes with marine-derived inhibitors could reduce livestock methane emissions by 30-50% while maintaining feed efficiency."*
 
 ## Usage Examples
 
@@ -163,41 +197,6 @@ AGTERIA_KEYWORDS = [
     "enzyme inhibitor"
 ]
 ```
-
-## Expected Impact
-
-This system should:
-- **Reduce literature review time by 70-80%**
-- **Increase research coverage by 10x**
-- **Discover novel research directions** you might miss manually
-- **Monitor competitors** and market developments automatically
-- **Generate hypotheses** for breakthrough innovations
-- **Identify collaboration opportunities** across domains
-
-## Research Capabilities
-
-### Daily Research Workflow
-1. **Morning Scan**: Automated discovery of new papers
-2. **Analysis**: AI extracts key findings and methodologies
-3. **Hypothesis Generation**: Creates novel research directions
-4. **Report**: Summarized insights delivered via dashboard
-5. **Memory Update**: Papers stored for future reference
-
-### Cross-Domain Innovation Examples
-- **Marine Biology → Agriculture**: "How do algae enzyme systems work in ruminants?"
-- **Pharmaceuticals → Feed Additives**: "Can drug delivery methods improve feed additive efficacy?"
-- **Materials Science → Livestock**: "How can nanotechnology enhance methane inhibitors?"
-
-## Example Results
-
-### Recent Discoveries
-- Found 15 novel methane inhibitor papers in last scan
-- Identified 3 cross-domain opportunities from marine biology
-- Generated 8 testable hypotheses for enzyme targets
-- Tracked 12 competitor research developments
-
-### Sample Hypothesis
-*"Based on deep-sea bacterial methane processing mechanisms, we hypothesize that targeting specific archaeal enzymes with marine-derived inhibitors could reduce livestock methane emissions by 30-50% while maintaining feed efficiency."*
 
 ## License
 
