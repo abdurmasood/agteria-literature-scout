@@ -216,11 +216,29 @@ KEY PRIORITIES FOR AGTERIA:
 - Breakthrough molecular discoveries
 
 FINAL ANSWER STRUCTURE:
-Your Final Answer must include:
-1. Novel Insights (each with [Paper ID: title] citations)
-2. Generated Hypotheses (each with supporting [Paper ID: title] citations)
-3. Next Steps (with relevant source references)
-4. Source Summary: List of all Paper IDs referenced
+Your Final Answer must be formatted as clean markdown with the following sections:
+
+## Overview
+Overview of the research query and the main findings.
+
+## 💡 Novel Insights
+
+1. First insight with [Paper ID: title] citation
+2. Second insight with [Paper ID: title] citation
+
+## 🧪 Generated Hypotheses
+
+1. First hypothesis with supporting [Paper ID: title] citations
+2. Second hypothesis with supporting [Paper ID: title] citations
+
+## 📋 Recommended Next Steps
+
+1. First action step with relevant source references
+2. Second action step with relevant source references
+
+## 📖 Source Summary
+
+List of all Paper IDs referenced with their titles
 
 Current Request: {input}
 

@@ -46,22 +46,6 @@ st.markdown("""
         color: white;
         margin: 0.5rem 0;
     }
-    .insight-box {
-        background: #f0f2f6;
-        padding: 1rem;
-        border-radius: 5px;
-        border-left: 4px solid #1f77b4;
-        margin: 1rem 0;
-        color: #333333;
-    }
-    .hypothesis-box {
-        background: #e8f4fd;
-        padding: 1rem;
-        border-radius: 5px;
-        border-left: 4px solid #17a2b8;
-        margin: 1rem 0;
-        color: #333333;
-    }
     .success-box {
         background: #d4edda;
         padding: 1rem;
@@ -251,51 +235,17 @@ def display_research_results(result: Dict[str, Any], index: int = 0):
     """Display research results in a structured format."""
     
     # Summary metrics
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2 = st.columns(2)
     
     with col1:
         st.metric("Papers Found", result.get('papers_found', 0))
     with col2:
-        st.metric("Novel Insights", len(result.get('novel_insights', [])))
-    with col3:
-        st.metric("Hypotheses", len(result.get('hypotheses', [])))
-    with col4:
-        st.metric("Next Steps", len(result.get('next_steps', [])))
-    with col5:
         sources_count = len(result.get('sources', []))
         st.metric("Sources Referenced", sources_count)
     
-    # Main response
-    st.markdown("### 📄 Research Findings")
+    # Display the agent's markdown response directly
+    st.markdown("---")
     st.markdown(result.get('response', 'No response available'))
-    
-    # Novel insights (clean display)
-    insights = result.get('novel_insights', [])
-    
-    if insights:
-        st.markdown("### 💡 Novel Insights")
-        for i, insight in enumerate(insights, 1):
-            st.markdown(f'<div class="insight-box">{i}. {insight}</div>', unsafe_allow_html=True)
-    
-    # Generated hypotheses (clean display)
-    hypotheses = result.get('hypotheses', [])
-    
-    if hypotheses:
-        st.markdown("### 🧪 Generated Hypotheses")
-        for i, hypothesis in enumerate(hypotheses, 1):
-            st.markdown(f'<div class="hypothesis-box">{i}. {hypothesis}</div>', unsafe_allow_html=True)
-    
-    # Next steps
-    if result.get('next_steps'):
-        st.markdown("### 📋 Recommended Next Steps")
-        for i, step in enumerate(result['next_steps'], 1):
-            st.markdown(f"{i}. {step}")
-    
-    # Bibliography
-    bibliography = result.get('bibliography')
-    if bibliography and bibliography != "No sources available for bibliography.":
-        st.markdown("### 📖 Bibliography")
-        st.markdown(bibliography)
     
     # Detailed source information
     sources = result.get('sources', [])
@@ -472,14 +422,14 @@ def display_scan_results(scan_results: Dict[str, Any], generate_report: bool = F
     if discoveries:
         st.markdown("### 🔬 Novel Discoveries")
         for i, discovery in enumerate(discoveries, 1):
-            st.markdown(f'<div class="insight-box"><strong>Discovery {i}:</strong> {discovery}</div>', unsafe_allow_html=True)
+            st.markdown(f"**Discovery {i}:** {discovery}")
     
     # Generated hypotheses
     hypotheses = scan_results.get('generated_hypotheses', [])
     if hypotheses:
         st.markdown("### 💡 Generated Hypotheses")
         for i, hypothesis in enumerate(hypotheses, 1):
-            st.markdown(f'<div class="hypothesis-box"><strong>Hypothesis {i}:</strong> {hypothesis}</div>', unsafe_allow_html=True)
+            st.markdown(f"**Hypothesis {i}:** {hypothesis}")
     
     # Generate report
     if (generate_report or show_generate_button) and st.session_state.report_generator:
@@ -541,7 +491,7 @@ def breakthrough_analysis_page():
                 if result.get('novel_insights'):
                     st.markdown("### 💡 Key Insights")
                     for insight in result['novel_insights']:
-                        st.markdown(f'<div class="insight-box">{insight}</div>', unsafe_allow_html=True)
+                        st.markdown(f"- {insight}")
                 
                 # Recommendations
                 if result.get('next_steps'):
@@ -580,13 +530,13 @@ def gap_explorer_page():
                 if result.get('novel_insights'):
                     st.markdown("### 🔬 Identified Opportunities")
                     for insight in result['novel_insights']:
-                        st.markdown(f'<div class="insight-box">{insight}</div>', unsafe_allow_html=True)
+                        st.markdown(f"- {insight}")
                 
                 # Generated hypotheses
                 if result.get('hypotheses'):
                     st.markdown("### 💡 Research Hypotheses to Fill Gaps")
                     for hypothesis in result['hypotheses']:
-                        st.markdown(f'<div class="hypothesis-box">{hypothesis}</div>', unsafe_allow_html=True)
+                        st.markdown(f"- {hypothesis}")
                 
             except Exception as e:
                 st.error(f"❌ Gap exploration failed: {e}")
