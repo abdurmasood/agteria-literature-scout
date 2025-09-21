@@ -15,7 +15,7 @@ class Config:
     SERPER_API_KEY: Optional[str] = os.getenv("SERPER_API_KEY")  # For Google Search
     
     # Model Configuration
-    DEFAULT_MODEL: str = "gpt-4-turbo-preview"
+    DEFAULT_MODEL: str = "gpt-4.1"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     TEMPERATURE: float = 0.7
     
