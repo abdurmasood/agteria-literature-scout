@@ -302,62 +302,158 @@ class SearchOrchestrator:
 def create_langchain_search_tools() -> List[Tool]:
     """Create LangChain-compatible tool instances."""
     
+    from ..utils.citation_tracker import CitationTracker
+    
     orchestrator = SearchOrchestrator()
     
+    # Use a global citation tracker to persist across searches
+    global _global_citation_tracker
+    if '_global_citation_tracker' not in globals():
+        _global_citation_tracker = CitationTracker()
+    citation_tracker = _global_citation_tracker
+    
     def arxiv_search_func(query: str) -> str:
-        """Search ArXiv and return formatted results."""
+        """Search ArXiv, store papers, and return results with paper IDs."""
         results = orchestrator.arxiv_tool.search(query)
         if not results:
             return "No ArXiv papers found for this query."
         
-        formatted = "ArXiv Papers Found:\n\n"
-        for i, paper in enumerate(results[:5], 1):
-            formatted += f"{i}. {paper['title']}\n"
+        # Store papers and get IDs
+        paper_ids = []
+        for paper in results[:5]:
+            # Standardize paper data format
+            paper_data = {
+                "title": paper.get("title", ""),
+                "authors": paper.get("authors", []),
+                "abstract": paper.get("summary", ""),
+                "arxiv_id": paper.get("arxiv_id", ""),
+                "url": paper.get("url", ""),
+                "published": paper.get("published", ""),
+                "database": "arxiv"
+            }
+            
+            # Add to citation tracker and get ID
+            paper_id = citation_tracker.add_source(paper_data)
+            paper_ids.append(paper_id)
+        
+        # Format results with paper IDs
+        formatted = f"ArXiv Papers Found (Query: {query}):\n\n"
+        for i, (paper, paper_id) in enumerate(zip(results[:5], paper_ids), 1):
+            formatted += f"{i}. [ID: {paper_id}] {paper['title']}\n"
             formatted += f"   Authors: {', '.join(paper['authors'][:3])}{'...' if len(paper['authors']) > 3 else ''}\n"
             formatted += f"   Summary: {paper['summary'][:200]}...\n"
             formatted += f"   ArXiv ID: {paper['arxiv_id']}\n\n"
         
+        # Add paper IDs for agent tracking
+        formatted += f"PAPER_IDS: {', '.join(paper_ids)}\n"
+        
         return formatted
     
     def pubmed_search_func(query: str) -> str:
-        """Search PubMed and return formatted results."""
+        """Search PubMed, store papers, and return results with paper IDs."""
         results = orchestrator.pubmed_tool.search(query)
         if not results:
             return "No PubMed papers found for this query."
         
-        formatted = "PubMed Papers Found:\n\n"
-        for i, paper in enumerate(results[:5], 1):
-            formatted += f"{i}. {paper['title']}\n"
+        # Store papers and get IDs
+        paper_ids = []
+        for paper in results[:5]:
+            # Standardize paper data format
+            paper_data = {
+                "title": paper.get("title", ""),
+                "authors": paper.get("authors", []),
+                "abstract": paper.get("abstract", ""),
+                "journal": paper.get("journal", ""),
+                "pmid": paper.get("pmid", ""),
+                "doi": paper.get("doi", ""),
+                "published": paper.get("published", ""),
+                "database": "pubmed"
+            }
+            
+            # Add to citation tracker and get ID
+            paper_id = citation_tracker.add_source(paper_data)
+            paper_ids.append(paper_id)
+        
+        # Format results with paper IDs
+        formatted = f"PubMed Papers Found (Query: {query}):\n\n"
+        for i, (paper, paper_id) in enumerate(zip(results[:5], paper_ids), 1):
+            formatted += f"{i}. [ID: {paper_id}] {paper['title']}\n"
             formatted += f"   Authors: {', '.join(paper['authors'][:3])}{'...' if len(paper['authors']) > 3 else ''}\n"
             formatted += f"   Journal: {paper['journal']}\n"
             formatted += f"   Abstract: {paper['abstract'][:200]}...\n"
             formatted += f"   PMID: {paper['pmid']}\n\n"
         
+        # Add paper IDs for agent tracking
+        formatted += f"PAPER_IDS: {', '.join(paper_ids)}\n"
+        
         return formatted
     
     def comprehensive_search_func(query: str) -> str:
-        """Search all sources and return comprehensive results."""
+        """Search all sources, store papers, and return comprehensive results."""
         results = orchestrator.search_all(query)
         
+        all_paper_ids = []
         formatted = f"Comprehensive Search Results for: {query}\n\n"
         
         # ArXiv results
         if results['arxiv']:
             formatted += "=== ArXiv Papers ===\n"
             for paper in results['arxiv'][:3]:
-                formatted += f"• {paper['title']}\n  {paper['summary'][:100]}...\n\n"
+                # Store paper and get ID
+                paper_data = {
+                    "title": paper.get("title", ""),
+                    "authors": paper.get("authors", []),
+                    "abstract": paper.get("summary", ""),
+                    "arxiv_id": paper.get("arxiv_id", ""),
+                    "url": paper.get("url", ""),
+                    "published": paper.get("published", ""),
+                    "database": "arxiv"
+                }
+                paper_id = citation_tracker.add_source(paper_data)
+                all_paper_ids.append(paper_id)
+                
+                formatted += f"• [ID: {paper_id}] {paper['title']}\n  {paper['summary'][:100]}...\n\n"
         
         # PubMed results  
         if results['pubmed']:
             formatted += "=== PubMed Papers ===\n"
             for paper in results['pubmed'][:3]:
-                formatted += f"• {paper['title']}\n  {paper['abstract'][:100]}...\n\n"
+                # Store paper and get ID
+                paper_data = {
+                    "title": paper.get("title", ""),
+                    "authors": paper.get("authors", []),
+                    "abstract": paper.get("abstract", ""),
+                    "journal": paper.get("journal", ""),
+                    "pmid": paper.get("pmid", ""),
+                    "doi": paper.get("doi", ""),
+                    "published": paper.get("published", ""),
+                    "database": "pubmed"
+                }
+                paper_id = citation_tracker.add_source(paper_data)
+                all_paper_ids.append(paper_id)
+                
+                formatted += f"• [ID: {paper_id}] {paper['title']}\n  {paper['abstract'][:100]}...\n\n"
         
         # Web results
         if results.get('web'):
             formatted += "=== Web Results ===\n"
             for item in results['web'][:2]:
-                formatted += f"• {item['title']}\n  {item['snippet']}\n\n"
+                # Store web result and get ID
+                paper_data = {
+                    "title": item.get("title", ""),
+                    "authors": [],
+                    "abstract": item.get("snippet", ""),
+                    "url": item.get("link", ""),
+                    "database": "web"
+                }
+                paper_id = citation_tracker.add_source(paper_data)
+                all_paper_ids.append(paper_id)
+                
+                formatted += f"• [ID: {paper_id}] {item['title']}\n  {item['snippet']}\n\n"
+        
+        # Add all paper IDs for agent tracking
+        if all_paper_ids:
+            formatted += f"ALL_PAPER_IDS: {', '.join(all_paper_ids)}\n"
         
         return formatted
     
@@ -382,16 +478,32 @@ def create_langchain_search_tools() -> List[Tool]:
     # Add web search if API key is available
     if Config.SERPER_API_KEY:
         def web_search_func(query: str) -> str:
-            """Search web for recent news and information."""
+            """Search web for recent news and information, store results with IDs."""
             results = orchestrator.web_tool.search(query)
             if not results:
                 return "No web results found for this query."
             
-            formatted = "Web Search Results:\n\n"
-            for i, item in enumerate(results, 1):
-                formatted += f"{i}. {item['title']}\n"
+            # Store web results and get IDs
+            paper_ids = []
+            for item in results[:5]:
+                paper_data = {
+                    "title": item.get("title", ""),
+                    "authors": [],
+                    "abstract": item.get("snippet", ""),
+                    "url": item.get("url", ""),
+                    "database": "web"
+                }
+                paper_id = citation_tracker.add_source(paper_data)
+                paper_ids.append(paper_id)
+            
+            formatted = f"Web Search Results (Query: {query}):\n\n"
+            for i, (item, paper_id) in enumerate(zip(results[:5], paper_ids), 1):
+                formatted += f"{i}. [ID: {paper_id}] {item['title']}\n"
                 formatted += f"   {item['snippet']}\n"
                 formatted += f"   URL: {item['url']}\n\n"
+            
+            # Add paper IDs for agent tracking
+            formatted += f"WEB_PAPER_IDS: {', '.join(paper_ids)}\n"
             
             return formatted
         
@@ -402,3 +514,11 @@ def create_langchain_search_tools() -> List[Tool]:
         ))
     
     return tools
+
+def get_global_citation_tracker():
+    """Get the global citation tracker instance."""
+    global _global_citation_tracker
+    if '_global_citation_tracker' not in globals():
+        from ..utils.citation_tracker import CitationTracker
+        _global_citation_tracker = CitationTracker()
+    return _global_citation_tracker

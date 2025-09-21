@@ -177,23 +177,32 @@ AVAILABLE TOOLS:
 
 Tool Names: {tool_names}
 
+CRITICAL SOURCE ATTRIBUTION REQUIREMENTS:
+🚨 MANDATORY: When you use search tools and get paper results with IDs, you MUST cite them in your final answer.
+
+CITATION FORMAT: Use [ID: paper_id] after each claim
+✅ EXAMPLE: "Marine enzymes reduce methane by 45% [ID: arxiv_2024001] and show safety in trials [ID: pubmed_12345]"
+
+IMPORTANT: Always include paper IDs from tool responses in your final answer.
+
 RESEARCH APPROACH:
 1. SEARCH STRATEGY: Use multiple databases (ArXiv, PubMed, Web) to ensure comprehensive coverage
 2. ANALYSIS DEPTH: Thoroughly analyze papers for novel mechanisms, molecules, and methodologies
 3. CROSS-DOMAIN THINKING: Actively look for connections between different research fields
-4. HYPOTHESIS GENERATION: Generate creative but scientifically grounded research hypotheses
+4. HYPOTHESIS GENERATION: Generate creative but scientifically grounded research hypotheses with source attribution
 5. MEMORY UTILIZATION: Check memory to avoid duplicate work and build on previous discoveries
+6. SOURCE TRACKING: Pay attention to Paper IDs returned by search tools and reference them in your analysis
 
 RESPONSE FORMAT:
 Use this format for your reasoning:
 
-Thought: [Your reasoning about what to do next]
+Thought: [Your reasoning about what to do next - note any Paper IDs from previous tool responses]
 Action: [The tool to use]
 Action Input: [The input to the tool]
-Observation: [The tool's response]
+Observation: [The tool's response - extract Paper IDs if present]
 ... (repeat Thought/Action/Action Input/Observation as needed)
-Thought: I now have enough information to provide a comprehensive response
-Final Answer: [Your detailed analysis and recommendations]
+Thought: I now have enough information to provide a comprehensive response with full source attribution
+Final Answer: [Your detailed analysis with proper citations for EVERY claim, insight, and hypothesis]
 
 KEY PRIORITIES FOR AGTERIA:
 - Novel methane inhibition mechanisms
@@ -202,9 +211,16 @@ KEY PRIORITIES FOR AGTERIA:
 - Cross-industry applicable technologies
 - Breakthrough molecular discoveries
 
+FINAL ANSWER STRUCTURE:
+Your Final Answer must include:
+1. Novel Insights (each with [Paper ID: title] citations)
+2. Generated Hypotheses (each with supporting [Paper ID: title] citations)
+3. Next Steps (with relevant source references)
+4. Source Summary: List of all Paper IDs referenced
+
 Current Request: {input}
 
-Begin your research:
+Begin your research and remember: NO CLAIM WITHOUT CITATION!
 
 {agent_scratchpad}"""
         )
@@ -216,15 +232,16 @@ Begin your research:
             prompt=react_prompt
         )
         
-        # Create agent executor
+        # Create agent executor with increased limits for source attribution workflow
         agent_executor = AgentExecutor(
             agent=agent,
             tools=self.tools,
             memory=self.agent_memory,
             verbose=self.verbose,
-            max_iterations=15,
-            max_execution_time=300,  # 5 minutes timeout
-            handle_parsing_errors=True
+            max_iterations=25,  # Increased for source attribution workflow
+            max_execution_time=600,  # 10 minutes timeout for comprehensive research
+            handle_parsing_errors=True,
+            early_stopping_method="generate"  # Allow agent to stop early if task is complete
         )
         
         return agent_executor
@@ -249,29 +266,72 @@ Begin your research:
         enhanced_query = self._enhance_query_with_context(research_query, focus_areas)
         
         try:
-            # Run the agent
+            logger.info(f"Starting agent execution for query: {research_query}")
+            
+            # Run the agent with enhanced error handling
             result = self.agent.invoke({"input": enhanced_query})
+            
+            # Check if agent completed successfully
+            agent_output = result.get("output", "")
+            if not agent_output or "Agent stopped due to" in agent_output:
+                logger.warning(f"Agent may have hit limits. Output: {agent_output[:200]}...")
+                
+                # Return partial results with helpful message
+                return {
+                    "query": research_query,
+                    "response": agent_output or "Agent execution incomplete - may have hit iteration or time limits",
+                    "error": "Agent execution incomplete",
+                    "papers_found": 0,
+                    "novel_insights": [],
+                    "hypotheses": [],
+                    "next_steps": ["Try a more specific query", "Check API keys and network connectivity"],
+                    "sources": [],
+                    "paper_ids_referenced": [],
+                    "timestamp": datetime.now().isoformat(),
+                    "troubleshooting_tips": [
+                        "The agent may need more time for complex research queries",
+                        "Try breaking down the query into smaller, more specific questions",
+                        "Check that all API keys are properly configured",
+                        "Verify network connectivity to research databases"
+                    ]
+                }
             
             # Process and structure the results
             structured_result = self._structure_research_result(
                 query=research_query,
-                agent_response=result.get("output", ""),
+                agent_response=agent_output,
                 focus_areas=focus_areas
             )
             
             # Update knowledge graph
             self._update_knowledge_from_research(structured_result)
             
-            logger.info(f"Research completed for: {research_query}")
+            logger.info(f"Research completed successfully for: {research_query}")
             return structured_result
             
         except Exception as e:
             logger.error(f"Error during research: {e}")
-            return {
+            error_result = {
                 "query": research_query,
                 "error": str(e),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "troubleshooting_tips": [
+                    "Check API keys in .env file",
+                    "Verify network connectivity", 
+                    "Try a simpler query first",
+                    "Check agent logs for detailed error information"
+                ]
             }
+            
+            # Add specific guidance based on error type
+            if "API" in str(e):
+                error_result["troubleshooting_tips"].insert(0, "API key issue detected - check OPENAI_API_KEY in .env")
+            elif "timeout" in str(e).lower():
+                error_result["troubleshooting_tips"].insert(0, "Timeout detected - try a more specific query")
+            elif "rate limit" in str(e).lower():
+                error_result["troubleshooting_tips"].insert(0, "Rate limit reached - wait a moment and try again")
+            
+            return error_result
     
     def daily_research_scan(self, custom_queries: Optional[List[str]] = None) -> Dict[str, Any]:
         """
@@ -460,17 +520,40 @@ Begin your research:
         return enhanced
     
     def _structure_research_result(self, query: str, agent_response: str, focus_areas: Optional[List[str]] = None) -> Dict[str, Any]:
-        """Structure the agent's research response."""
+        """Structure the agent's research response with source attribution."""
+        # Extract paper IDs from agent response
+        paper_ids_from_response = self._extract_paper_ids(agent_response)
+        
+        # Get all paper IDs from citation tracker (more reliable)
+        from ..tools.search_tools import get_global_citation_tracker
+        citation_tracker = get_global_citation_tracker()
+        all_stored_sources = citation_tracker.get_all_sources()
+        all_paper_ids = [source.id for source in all_stored_sources]
+        
+        # Use stored IDs if agent response doesn't have any
+        paper_ids = paper_ids_from_response if paper_ids_from_response else all_paper_ids
+        sources = self._get_sources_for_ids(paper_ids)
+        
+        # Extract insights with source attribution
+        insights_with_sources = self._extract_insights_with_sources(agent_response)
+        hypotheses_with_sources = self._extract_hypotheses_with_sources(agent_response)
+        
         return {
             "query": query,
             "focus_areas": focus_areas or [],
             "response": agent_response,
             "timestamp": datetime.now().isoformat(),
             "session_id": id(self),
-            "papers_found": self._extract_paper_count(agent_response),
+            "papers_found": len(sources),
             "novel_insights": self._extract_novel_insights(agent_response),
             "hypotheses": self._extract_hypotheses(agent_response),
-            "next_steps": self._extract_next_steps(agent_response)
+            "next_steps": self._extract_next_steps(agent_response),
+            # New source attribution fields
+            "sources": sources,
+            "insights_with_sources": insights_with_sources,
+            "hypotheses_with_sources": hypotheses_with_sources,
+            "paper_ids_referenced": paper_ids,
+            "bibliography": self._generate_bibliography(sources)
         }
     
     def _extract_paper_count(self, response: str) -> int:
@@ -563,6 +646,338 @@ Begin your research:
         
         return summary
     
+    def _extract_paper_ids(self, response: str) -> List[str]:
+        """Extract paper IDs mentioned in the agent response."""
+        import re
+        
+        paper_ids = []
+        
+        # Pattern 1: [ID: paper_id] format (simplified)
+        id_pattern = r'\[ID:\s*([^\]]+?)\]'
+        matches = re.findall(id_pattern, response, re.IGNORECASE)
+        for match in matches:
+            clean_id = match.split(':')[0].strip()
+            if clean_id and clean_id not in paper_ids:
+                paper_ids.append(clean_id)
+        
+        # Pattern 2: [Paper ID: title] format (original)
+        paper_id_pattern = r'\[(?:Paper )?ID:\s*([^\]]+?)\]'
+        matches = re.findall(paper_id_pattern, response, re.IGNORECASE)
+        for match in matches:
+            clean_id = match.split(':')[0].strip()
+            if clean_id and clean_id not in paper_ids:
+                paper_ids.append(clean_id)
+        
+        # Pattern 3: PAPER_IDS: lists from tool responses
+        list_pattern = r'(?:PAPER_IDS|ALL_PAPER_IDS|WEB_PAPER_IDS):\s*([^\n]+)'
+        list_matches = re.findall(list_pattern, response, re.IGNORECASE)
+        for match in list_matches:
+            ids = [id.strip() for id in match.split(',') if id.strip()]
+            for id in ids:
+                if id not in paper_ids:
+                    paper_ids.append(id)
+        
+        # Pattern 4: Extract arxiv, pubmed, doi, web IDs directly
+        direct_patterns = [
+            r'(arxiv_[a-zA-Z0-9_]+)',
+            r'(pubmed_[a-zA-Z0-9_]+)', 
+            r'(doi_[a-zA-Z0-9_]+)',
+            r'(web_[a-zA-Z0-9_]+)'
+        ]
+        for pattern in direct_patterns:
+            matches = re.findall(pattern, response, re.IGNORECASE)
+            for match in matches:
+                if match not in paper_ids:
+                    paper_ids.append(match)
+        
+        logger.info(f"Extracted {len(paper_ids)} paper IDs from response")
+        return paper_ids
+    
+    def _get_sources_for_ids(self, paper_ids: List[str]) -> List[Dict[str, Any]]:
+        """Get source information for the given paper IDs."""
+        from ..tools.search_tools import get_global_citation_tracker
+        
+        citation_tracker = get_global_citation_tracker()
+        sources = []
+        
+        for paper_id in paper_ids:
+            source = citation_tracker.get_source(paper_id)
+            if source:
+                sources.append(source.to_dict())
+            else:
+                logger.warning(f"Source not found for paper ID: {paper_id}")
+        
+        logger.info(f"Retrieved {len(sources)} sources for {len(paper_ids)} paper IDs")
+        return sources
+    
+    def _extract_insights_with_sources(self, response: str) -> List[Dict[str, Any]]:
+        """Extract insights with their source citations from the response."""
+        import re
+        
+        insights_with_sources = []
+        
+        # Find insights that have citations
+        # Pattern: insight text [Paper ID: title] or [ID: id]
+        insight_pattern = r'([^.\n]+?)\s*\[(?:Paper )?ID:\s*([^\]]+?)\]([^.\n]*)'
+        matches = re.findall(insight_pattern, response, re.IGNORECASE | re.DOTALL)
+        
+        for before_text, paper_id, after_text in matches:
+            # Clean up the insight text
+            insight_text = (before_text + after_text).strip()
+            
+            # Extract just the ID part
+            clean_id = paper_id.split(':')[0].strip()
+            
+            # Skip if this looks like it's part of a larger sentence structure
+            if len(insight_text) > 20 and not insight_text.lower().startswith(('the', 'a', 'an', 'this', 'that')):
+                insights_with_sources.append({
+                    "insight": insight_text,
+                    "source_ids": [clean_id],
+                    "confidence": "medium",
+                    "insight_type": "discovery"
+                })
+        
+        logger.info(f"Extracted {len(insights_with_sources)} insights with sources")
+        return insights_with_sources
+    
+    def _extract_hypotheses_with_sources(self, response: str) -> List[Dict[str, Any]]:
+        """Extract hypotheses with their source citations from the response."""
+        import re
+        
+        hypotheses_with_sources = []
+        
+        # Look for hypothesis sections or hypothesis keywords with citations
+        hypothesis_keywords = ['hypothesis', 'hypothesize', 'propose', 'suggest', 'predict', 'theorize']
+        
+        # Split response into sentences
+        sentences = re.split(r'[.!?]\s+', response)
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            
+            # Check if sentence contains hypothesis keywords and citations
+            has_hypothesis_keyword = any(keyword in sentence.lower() for keyword in hypothesis_keywords)
+            has_citation = re.search(r'\[(?:Paper )?ID:\s*([^\]]+?)\]', sentence, re.IGNORECASE)
+            
+            if has_hypothesis_keyword and has_citation and len(sentence) > 30:
+                # Extract paper IDs from this sentence
+                paper_ids = []
+                id_matches = re.findall(r'\[(?:Paper )?ID:\s*([^\]]+?)\]', sentence, re.IGNORECASE)
+                for match in id_matches:
+                    clean_id = match.split(':')[0].strip()
+                    paper_ids.append(clean_id)
+                
+                # Clean the hypothesis text (remove citations for readability)
+                clean_hypothesis = re.sub(r'\[(?:Paper )?ID:\s*[^\]]+?\]', '', sentence).strip()
+                
+                hypotheses_with_sources.append({
+                    "hypothesis": clean_hypothesis,
+                    "source_ids": paper_ids,
+                    "confidence": "medium",
+                    "insight_type": "hypothesis"
+                })
+        
+        logger.info(f"Extracted {len(hypotheses_with_sources)} hypotheses with sources")
+        return hypotheses_with_sources
+    
+    def _generate_bibliography(self, sources: List[Dict[str, Any]]) -> str:
+        """Generate formatted bibliography from sources."""
+        if not sources:
+            return "No sources available for bibliography."
+        
+        bibliography = "## Bibliography\n\n"
+        
+        for i, source in enumerate(sources, 1):
+            title = source.get('title', 'Unknown Title')
+            authors = source.get('authors', [])
+            journal = source.get('journal', '')
+            published = source.get('published', '')
+            database = source.get('database', 'unknown')
+            
+            # Format authors
+            if authors:
+                if len(authors) == 1:
+                    author_str = authors[0]
+                elif len(authors) <= 3:
+                    author_str = ', '.join(authors[:-1]) + f', & {authors[-1]}'
+                else:
+                    author_str = f"{authors[0]} et al."
+            else:
+                author_str = "Unknown Authors"
+            
+            # Extract year
+            year = "n.d."
+            if published:
+                import re
+                year_match = re.search(r'(\d{4})', str(published))
+                if year_match:
+                    year = year_match.group(1)
+            
+            # Create citation
+            citation = f"{author_str} ({year}). {title}."
+            
+            if journal:
+                citation += f" {journal}."
+            
+            # Add database info
+            citation += f" Retrieved from {database.title()}."
+            
+            # Add DOI or URL if available
+            if source.get('doi'):
+                citation += f" https://doi.org/{source['doi']}"
+            elif source.get('url'):
+                citation += f" {source['url']}"
+            
+            bibliography += f"{i}. {citation}\n\n"
+        
+        return bibliography
+
+    def test_basic_functionality(self) -> Dict[str, Any]:
+        """Test basic agent functionality with a simple query."""
+        try:
+            logger.info("Testing basic agent functionality...")
+            
+            # Simple test query
+            test_query = "What is methane?"
+            
+            # Use a simplified prompt for testing
+            simple_prompt = f"""You are a research assistant. Answer this question briefly: {test_query}
+            
+Use this format:
+Thought: I need to answer this question about methane
+Action: (no tools needed for basic definition)
+Final Answer: [Your brief answer about methane]"""
+            
+            # Create a simple agent for testing
+            from langchain.agents import create_react_agent
+            from langchain_core.prompts import PromptTemplate
+            
+            test_prompt = PromptTemplate(
+                input_variables=["tools", "tool_names", "input", "agent_scratchpad"],
+                template=f"""Answer this question: {{input}}
+
+Available tools: {{tools}}
+
+{{agent_scratchpad}}"""
+            )
+            
+            test_agent = create_react_agent(
+                llm=self.llm,
+                tools=[],  # No tools for basic test
+                prompt=test_prompt
+            )
+            
+            from langchain.agents import AgentExecutor
+            test_executor = AgentExecutor(
+                agent=test_agent,
+                tools=[],
+                verbose=True,
+                max_iterations=3,
+                max_execution_time=30,
+                handle_parsing_errors=True
+            )
+            
+            result = test_executor.invoke({"input": test_query})
+            
+            return {
+                "test_status": "success",
+                "test_query": test_query,
+                "test_response": result.get("output", ""),
+                "message": "Basic agent functionality is working"
+            }
+            
+        except Exception as e:
+            logger.error(f"Basic functionality test failed: {e}")
+            return {
+                "test_status": "failed", 
+                "error": str(e),
+                "message": "Basic agent functionality has issues"
+            }
+    
+    def conduct_simple_research(self, research_query: str) -> Dict[str, Any]:
+        """Conduct research with simplified prompt (fallback mode)."""
+        logger.info(f"Using simplified research mode for: {research_query}")
+        
+        # Simplified prompt without complex source attribution
+        simple_query = f"""Research this topic and provide a brief summary: {research_query}
+
+Focus on:
+1. Key findings from recent papers
+2. Main research trends  
+3. Practical applications
+
+Use available search tools and provide a concise summary."""
+        
+        try:
+            # Create simplified agent executor with lower complexity
+            from langchain.agents import create_react_agent, AgentExecutor
+            from langchain_core.prompts import PromptTemplate
+            
+            simple_prompt = PromptTemplate(
+                input_variables=["tools", "tool_names", "input", "agent_scratchpad"],
+                template="""You are a research assistant. Use the available tools to research the topic and provide a summary.
+
+Available tools:
+{tools}
+
+Tool names: {tool_names}
+
+Research this: {input}
+
+Use this format:
+Thought: [your reasoning]
+Action: [tool to use]
+Action Input: [input to tool]
+Observation: [tool response]
+... (repeat as needed)
+Thought: I have enough information to provide a summary
+Final Answer: [your research summary]
+
+{agent_scratchpad}"""
+            )
+            
+            simple_agent = create_react_agent(
+                llm=self.llm,
+                tools=self.tools,
+                prompt=simple_prompt
+            )
+            
+            simple_executor = AgentExecutor(
+                agent=simple_agent,
+                tools=self.tools,
+                verbose=self.verbose,
+                max_iterations=10,
+                max_execution_time=300,
+                handle_parsing_errors=True
+            )
+            
+            result = simple_executor.invoke({"input": simple_query})
+            
+            return {
+                "query": research_query,
+                "response": result.get("output", ""),
+                "mode": "simplified",
+                "timestamp": datetime.now().isoformat(),
+                "papers_found": 0,  # Basic structure for compatibility
+                "novel_insights": [],
+                "hypotheses": [],
+                "next_steps": []
+            }
+            
+        except Exception as e:
+            logger.error(f"Simplified research also failed: {e}")
+            return {
+                "query": research_query,
+                "error": f"Both normal and simplified research failed: {str(e)}",
+                "timestamp": datetime.now().isoformat(),
+                "troubleshooting_tips": [
+                    "Check OpenAI API key configuration",
+                    "Verify internet connectivity",
+                    "Try restarting the application",
+                    "Check system logs for detailed errors"
+                ]
+            }
+
     def get_agent_status(self) -> Dict[str, Any]:
         """Get current status of the agent."""
         memory_stats = self.memory.get_memory_stats()

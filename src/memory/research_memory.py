@@ -15,6 +15,7 @@ from langchain_chroma import Chroma
 
 from ..config import Config
 from ..processors.document_processor import DuplicateDetector, ContentValidator
+from ..utils.citation_tracker import CitationTracker
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -52,6 +53,7 @@ class ResearchMemory:
         # Initialize utilities
         self.duplicate_detector = DuplicateDetector()
         self.content_validator = ContentValidator()
+        self.citation_tracker = CitationTracker()
         
         logger.info(f"Initialized ResearchMemory with {self.get_document_count()} documents")
     
@@ -114,6 +116,23 @@ class ResearchMemory:
                 # Add quality score
                 quality_score = self.content_validator.get_quality_score(doc)
                 doc.metadata["quality_score"] = quality_score
+                
+                # Add to citation tracker for source attribution
+                paper_data = {
+                    "title": doc.metadata.get("title", "Unknown Title"),
+                    "authors": doc.metadata.get("authors", []),
+                    "journal": doc.metadata.get("journal"),
+                    "published": doc.metadata.get("published"),
+                    "doi": doc.metadata.get("doi"),
+                    "arxiv_id": doc.metadata.get("arxiv_id"),
+                    "pmid": doc.metadata.get("pmid"),
+                    "url": doc.metadata.get("url"),
+                    "database": doc.metadata.get("source_database", "memory"),
+                    "abstract": doc.page_content[:500] if len(doc.page_content) > 500 else doc.page_content
+                }
+                
+                source_id = self.citation_tracker.add_source(paper_data)
+                doc.metadata["source_id"] = source_id
                 
                 # Add to vector store
                 self.vector_store.add_documents([doc], ids=[doc_id])
@@ -477,6 +496,141 @@ class ResearchMemory:
             
         except Exception as e:
             logger.warning(f"Error logging search: {e}")
+    
+    def search_papers_with_sources(self, query: str, k: int = 10, filter_dict: Optional[Dict[str, Any]] = None,
+                                  min_quality_score: float = 0.0) -> List[Tuple[Document, Dict[str, Any]]]:
+        """
+        Search for papers with their full source attribution information.
+        
+        Args:
+            query: Search query
+            k: Number of results to return
+            filter_dict: Optional metadata filters
+            min_quality_score: Minimum quality score threshold
+        
+        Returns:
+            List of (document, source_info) tuples
+        """
+        try:
+            # Get regular search results
+            papers = self.search_papers(query, k, filter_dict, min_quality_score)
+            
+            # Enhance with source information
+            papers_with_sources = []
+            for paper in papers:
+                source_id = paper.metadata.get("source_id")
+                source_info = None
+                
+                if source_id:
+                    source = self.citation_tracker.get_source(source_id)
+                    if source:
+                        source_info = source.to_dict()
+                
+                papers_with_sources.append((paper, source_info))
+            
+            logger.info(f"Found {len(papers_with_sources)} papers with source attribution for query: {query}")
+            return papers_with_sources
+            
+        except Exception as e:
+            logger.error(f"Error searching papers with sources: {e}")
+            return []
+    
+    def get_paper_with_source(self, doc_id: str) -> Optional[Tuple[Document, Dict[str, Any]]]:
+        """
+        Retrieve a specific paper with its source information.
+        
+        Args:
+            doc_id: Document ID
+        
+        Returns:
+            (Document, source_info) tuple if found, None otherwise
+        """
+        try:
+            paper = self.get_paper_by_id(doc_id)
+            if not paper:
+                return None
+            
+            source_id = paper.metadata.get("source_id")
+            source_info = None
+            
+            if source_id:
+                source = self.citation_tracker.get_source(source_id)
+                if source:
+                    source_info = source.to_dict()
+            
+            return (paper, source_info)
+            
+        except Exception as e:
+            logger.error(f"Error retrieving paper with source {doc_id}: {e}")
+            return None
+    
+    def get_citation_tracker(self) -> CitationTracker:
+        """Get the citation tracker instance."""
+        return self.citation_tracker
+    
+    def generate_research_bibliography(self, paper_ids: Optional[List[str]] = None) -> str:
+        """
+        Generate bibliography for papers in memory.
+        
+        Args:
+            paper_ids: Optional list of specific paper IDs to include
+        
+        Returns:
+            Formatted bibliography string
+        """
+        try:
+            if paper_ids:
+                # Generate bibliography for specific papers
+                sources = []
+                for paper_id in paper_ids:
+                    paper = self.get_paper_by_id(paper_id)
+                    if paper:
+                        source_id = paper.metadata.get("source_id")
+                        if source_id:
+                            source = self.citation_tracker.get_source(source_id)
+                            if source:
+                                sources.append(source.to_dict())
+            else:
+                # Generate bibliography for all papers in memory
+                sources = []
+                for source in self.citation_tracker.get_all_sources():
+                    sources.append(source.to_dict())
+            
+            if not sources:
+                return "No sources available for bibliography."
+            
+            return self.citation_tracker.generate_bibliography()
+            
+        except Exception as e:
+            logger.error(f"Error generating bibliography: {e}")
+            return f"Error generating bibliography: {e}"
+    
+    def export_sources_with_papers(self) -> str:
+        """
+        Export all sources and papers as JSON.
+        
+        Returns:
+            JSON string with sources and paper metadata
+        """
+        try:
+            # Get citation tracker export
+            citation_data = json.loads(self.citation_tracker.export_sources_json())
+            
+            # Add paper metadata from memory
+            memory_stats = self.get_memory_stats()
+            
+            combined_data = {
+                "sources": citation_data.get("sources", {}),
+                "insights": citation_data.get("insights", []),
+                "memory_stats": memory_stats,
+                "export_timestamp": datetime.now().isoformat()
+            }
+            
+            return json.dumps(combined_data, indent=2)
+            
+        except Exception as e:
+            logger.error(f"Error exporting sources with papers: {e}")
+            return f'{{"error": "{e}"}}'
 
 class KnowledgeGraph:
     """Simple knowledge graph for tracking research concepts and relationships."""

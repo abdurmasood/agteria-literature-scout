@@ -196,6 +196,17 @@ class ReportGenerator:
     
     def _prepare_daily_digest_data(self, scan_results: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare data for daily digest report."""
+        # Extract source information from results
+        all_sources = []
+        total_paper_ids = set()
+        
+        for result in scan_results.get("results", []):
+            sources = result.get("sources", [])
+            all_sources.extend(sources)
+            
+            paper_ids = result.get("paper_ids_referenced", [])
+            total_paper_ids.update(paper_ids)
+        
         return {
             "date": datetime.now().strftime("%Y-%m-%d"),
             "scan_summary": scan_results.get("summary", ""),
@@ -203,24 +214,42 @@ class ReportGenerator:
             "novel_discoveries": scan_results.get("novel_discoveries", []),
             "hypotheses": scan_results.get("generated_hypotheses", []),
             "results": scan_results.get("results", []),
+            "sources": all_sources,
+            "paper_ids_referenced": list(total_paper_ids),
             "statistics": {
                 "total_papers_found": sum(r.get("papers_found", 0) for r in scan_results.get("results", [])),
                 "novel_discovery_count": len(scan_results.get("novel_discoveries", [])),
-                "hypothesis_count": len(scan_results.get("generated_hypotheses", []))
+                "hypothesis_count": len(scan_results.get("generated_hypotheses", [])),
+                "sources_referenced": len(all_sources),
+                "unique_paper_ids": len(total_paper_ids)
             }
         }
     
     def _prepare_research_summary_data(self, research_results: List[Dict[str, Any]], 
                                      topic: str) -> Dict[str, Any]:
         """Prepare data for research summary report."""
+        # Extract source information from all results
+        all_sources = []
+        total_paper_ids = set()
+        
+        for result in research_results:
+            sources = result.get("sources", [])
+            all_sources.extend(sources)
+            
+            paper_ids = result.get("paper_ids_referenced", [])
+            total_paper_ids.update(paper_ids)
+        
         return {
             "topic": topic,
             "generated_at": datetime.now().isoformat(),
             "total_results": len(research_results),
             "results": research_results,
+            "sources": all_sources,
+            "paper_ids_referenced": list(total_paper_ids),
             "key_insights": self._extract_key_insights(research_results),
             "methodology_overview": self._extract_methodologies(research_results),
-            "future_directions": self._extract_future_directions(research_results)
+            "future_directions": self._extract_future_directions(research_results),
+            "bibliography": self._generate_bibliography_from_sources(all_sources)
         }
     
     def _prepare_hypothesis_report_data(self, hypotheses: List[Dict[str, Any]], 
@@ -284,7 +313,12 @@ class ReportGenerator:
 - **Papers Found**: {stats['total_papers_found']}
 - **Novel Discoveries**: {stats['novel_discovery_count']}
 - **Hypotheses Generated**: {stats['hypothesis_count']}
+- **Sources Referenced**: {stats.get('sources_referenced', 0)}
+- **Unique Paper IDs**: {stats.get('unique_paper_ids', 0)}
 """
+        
+        # Generate bibliography from sources
+        bibliography_section = self._generate_bibliography_from_sources(data.get("sources", []))
         
         return template.format(
             date=data["date"],
@@ -292,7 +326,8 @@ class ReportGenerator:
             discoveries=discoveries_section,
             hypotheses=hypotheses_section,
             statistics=stats_section,
-            queries_processed=data["queries_processed"]
+            queries_processed=data["queries_processed"],
+            bibliography=bibliography_section
         )
     
     def _generate_markdown_research_summary(self, data: Dict[str, Any]) -> str:
@@ -309,13 +344,18 @@ class ReportGenerator:
         for method in data["methodology_overview"]:
             methods_section += f"- {method}\n"
         
+        # Build bibliography section
+        bibliography_section = data.get("bibliography", "No sources available.")
+        
         return template.format(
             topic=data["topic"],
             date=datetime.now().strftime("%Y-%m-%d"),
             total_results=data["total_results"],
             insights=insights_section,
             methodologies=methods_section,
-            future_directions="\n".join(f"- {fd}" for fd in data["future_directions"])
+            future_directions="\n".join(f"- {fd}" for fd in data["future_directions"]),
+            bibliography=bibliography_section,
+            sources_count=len(data.get("sources", []))
         )
     
     def _generate_markdown_hypothesis_report(self, data: Dict[str, Any]) -> str:
@@ -415,6 +455,10 @@ class ReportGenerator:
 
 {hypotheses}
 
+## 📚 Sources
+
+{bibliography}
+
 ---
 
 *Generated by Agteria Literature Scout on {date}*
@@ -425,7 +469,8 @@ class ReportGenerator:
         return """# Research Summary: {topic}
 
 **Generated**: {date}  
-**Total Results Analyzed**: {total_results}
+**Total Results Analyzed**: {total_results}  
+**Sources Referenced**: {sources_count}
 
 ## 🎯 Key Insights
 
@@ -438,6 +483,10 @@ class ReportGenerator:
 ## 🔮 Future Research Directions
 
 {future_directions}
+
+## 📚 Bibliography
+
+{bibliography}
 
 ---
 
@@ -610,3 +659,64 @@ class ReportGenerator:
                 "frequency": [8]
             }
         }
+    
+    def _generate_bibliography_from_sources(self, sources: List[Dict[str, Any]]) -> str:
+        """Generate formatted bibliography from source list."""
+        if not sources:
+            return "No sources available."
+        
+        bibliography = ""
+        
+        # Remove duplicates based on title
+        seen_titles = set()
+        unique_sources = []
+        for source in sources:
+            title = source.get('title', 'Unknown Title')
+            if title not in seen_titles:
+                seen_titles.add(title)
+                unique_sources.append(source)
+        
+        for i, source in enumerate(unique_sources, 1):
+            title = source.get('title', 'Unknown Title')
+            authors = source.get('authors', [])
+            journal = source.get('journal', '')
+            published = source.get('published', '')
+            database = source.get('database', 'unknown')
+            
+            # Format authors
+            if authors:
+                if len(authors) == 1:
+                    author_str = authors[0]
+                elif len(authors) <= 3:
+                    author_str = ', '.join(authors[:-1]) + f', & {authors[-1]}'
+                else:
+                    author_str = f"{authors[0]} et al."
+            else:
+                author_str = "Unknown Authors"
+            
+            # Extract year
+            year = "n.d."
+            if published:
+                import re
+                year_match = re.search(r'(\d{4})', str(published))
+                if year_match:
+                    year = year_match.group(1)
+            
+            # Create citation
+            citation = f"{author_str} ({year}). {title}."
+            
+            if journal:
+                citation += f" {journal}."
+            
+            # Add database info
+            citation += f" Retrieved from {database.title()}."
+            
+            # Add DOI or URL if available
+            if source.get('doi'):
+                citation += f" https://doi.org/{source['doi']}"
+            elif source.get('url'):
+                citation += f" {source['url']}"
+            
+            bibliography += f"{i}. {citation}\n\n"
+        
+        return bibliography

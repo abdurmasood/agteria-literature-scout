@@ -203,25 +203,128 @@ def research_page():
                 help="Select specific areas to focus on"
             )
         
-        submitted = st.form_submit_button("🔍 Start Research", use_container_width=True)
+        # Research mode selection
+        col3, col4, col5 = st.columns([2, 1, 1])
+        with col3:
+            submitted = st.form_submit_button("🔍 Start Research", use_container_width=True)
+        with col4:
+            simple_mode = st.form_submit_button("🔧 Simple Mode", use_container_width=True, 
+                                               help="Use if normal research fails")
+        with col5:
+            test_mode = st.form_submit_button("🧪 Test Agent", use_container_width=True,
+                                             help="Test basic functionality")
     
-    if submitted and query:
-        with st.spinner(f"Researching: {query}..."):
+    # Handle different research modes
+    if test_mode:
+        with st.spinner("Testing agent functionality..."):
             try:
-                result = st.session_state.scout.conduct_research(query, focus_areas)
+                result = st.session_state.scout.test_basic_functionality()
                 
-                # Store in history
+                if result.get('test_status') == 'success':
+                    st.success(f"✅ {result.get('message', 'Test passed')}")
+                    st.info(f"**Test Query:** {result.get('test_query', 'N/A')}")
+                    st.markdown(f"**Test Response:** {result.get('test_response', 'N/A')}")
+                else:
+                    st.error(f"❌ {result.get('message', 'Test failed')}")
+                    st.markdown(f"**Error:** {result.get('error', 'Unknown error')}")
+                    
+                    st.markdown("### 💡 Troubleshooting Tips:")
+                    st.markdown("- Check OpenAI API key in .env file")
+                    st.markdown("- Verify internet connectivity")
+                    st.markdown("- Check system logs for detailed errors")
+                    
+            except Exception as e:
+                st.error(f"❌ Functionality test failed: {e}")
+                st.markdown("### 💡 This suggests a fundamental configuration issue")
+                st.markdown("- Verify OpenAI API key is set correctly")
+                st.markdown("- Check that all dependencies are installed")
+                st.markdown("- Try restarting the Streamlit application")
+    
+    elif simple_mode and query:
+        with st.spinner(f"Simple research mode: {query}..."):
+            st.warning("⚠️ Using simplified research mode (reduced source attribution)")
+            try:
+                result = st.session_state.scout.conduct_simple_research(query)
+                
+                # Store in history with mode indicator
                 st.session_state.research_history.append({
                     'timestamp': datetime.now(),
-                    'query': query,
+                    'query': query + " (Simple Mode)",
                     'result': result
                 })
                 
                 # Display results
-                display_research_results(result, 0)
+                if result.get('error'):
+                    st.error(f"❌ Error: {result['error']}")
+                    if result.get('troubleshooting_tips'):
+                        st.markdown("### 💡 Troubleshooting Tips:")
+                        for tip in result['troubleshooting_tips']:
+                            st.markdown(f"- {tip}")
+                else:
+                    st.success("✅ Simple research completed")
+                    st.markdown("### 📄 Research Summary")
+                    st.markdown(result.get('response', 'No response available'))
+                
+            except Exception as e:
+                st.error(f"❌ Simple research failed: {e}")
+    
+    elif submitted and query:
+        with st.spinner(f"Researching: {query}..."):
+            try:
+                result = st.session_state.scout.conduct_research(query, focus_areas)
+                
+                # Check if agent hit limits
+                if result.get('error') == "Agent execution incomplete":
+                    st.warning("⚠️ Research agent hit time/iteration limits")
+                    st.markdown("### 🔧 Try These Solutions:")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🔧 Try Simple Mode", key="simple_fallback"):
+                            result = st.session_state.scout.conduct_simple_research(query)
+                            st.rerun()
+                    
+                    with col2:
+                        if st.button("🧪 Test Agent", key="test_fallback"):
+                            test_result = st.session_state.scout.test_basic_functionality()
+                            st.json(test_result)
+                    
+                    if result.get('troubleshooting_tips'):
+                        st.markdown("### 💡 Troubleshooting Tips:")
+                        for tip in result['troubleshooting_tips']:
+                            st.markdown(f"- {tip}")
+                else:
+                    # Store in history
+                    st.session_state.research_history.append({
+                        'timestamp': datetime.now(),
+                        'query': query,
+                        'result': result
+                    })
+                    
+                    # Display results
+                    display_research_results(result, 0)
                 
             except Exception as e:
                 st.error(f"❌ Research failed: {e}")
+                
+                # Offer fallback options
+                st.markdown("### 🔧 Try Alternative Modes:")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🔧 Try Simple Mode", key="simple_after_error"):
+                        try:
+                            result = st.session_state.scout.conduct_simple_research(query)
+                            st.json(result)
+                        except Exception as e2:
+                            st.error(f"Simple mode also failed: {e2}")
+                
+                with col2:
+                    if st.button("🧪 Test Basic Functionality", key="test_after_error"):
+                        try:
+                            test_result = st.session_state.scout.test_basic_functionality()
+                            st.json(test_result)
+                        except Exception as e2:
+                            st.error(f"Test also failed: {e2}")
     
     # Research history
     if st.session_state.research_history:
@@ -235,7 +338,7 @@ def display_research_results(result: Dict[str, Any], index: int = 0):
     """Display research results in a structured format."""
     
     # Summary metrics
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         st.metric("Papers Found", result.get('papers_found', 0))
@@ -245,19 +348,48 @@ def display_research_results(result: Dict[str, Any], index: int = 0):
         st.metric("Hypotheses", len(result.get('hypotheses', [])))
     with col4:
         st.metric("Next Steps", len(result.get('next_steps', [])))
+    with col5:
+        sources_count = len(result.get('sources', []))
+        st.metric("Sources Referenced", sources_count)
     
     # Main response
     st.markdown("### 📄 Research Findings")
     st.markdown(result.get('response', 'No response available'))
     
-    # Novel insights
-    if result.get('novel_insights'):
+    # Enhanced insights with sources
+    insights_with_sources = result.get('insights_with_sources', [])
+    if insights_with_sources:
+        st.markdown("### 💡 Novel Insights with Sources")
+        for i, insight_data in enumerate(insights_with_sources, 1):
+            insight = insight_data.get('insight', '')
+            source_ids = insight_data.get('source_ids', [])
+            
+            st.markdown(f'<div class="insight-box">{i}. {insight}</div>', unsafe_allow_html=True)
+            
+            if source_ids:
+                with st.expander(f"📄 Sources for Insight {i}", expanded=False):
+                    source_text = ", ".join([f"`{sid}`" for sid in source_ids])
+                    st.markdown(f"**Source IDs:** {source_text}")
+    elif result.get('novel_insights'):
         st.markdown("### 💡 Novel Insights")
         for i, insight in enumerate(result['novel_insights'], 1):
             st.markdown(f'<div class="insight-box">{i}. {insight}</div>', unsafe_allow_html=True)
     
-    # Hypotheses
-    if result.get('hypotheses'):
+    # Enhanced hypotheses with sources
+    hypotheses_with_sources = result.get('hypotheses_with_sources', [])
+    if hypotheses_with_sources:
+        st.markdown("### 🧪 Generated Hypotheses with Sources")
+        for i, hypothesis_data in enumerate(hypotheses_with_sources, 1):
+            hypothesis = hypothesis_data.get('hypothesis', '')
+            source_ids = hypothesis_data.get('source_ids', [])
+            
+            st.markdown(f'<div class="hypothesis-box">{i}. {hypothesis}</div>', unsafe_allow_html=True)
+            
+            if source_ids:
+                with st.expander(f"📄 Sources for Hypothesis {i}", expanded=False):
+                    source_text = ", ".join([f"`{sid}`" for sid in source_ids])
+                    st.markdown(f"**Source IDs:** {source_text}")
+    elif result.get('hypotheses'):
         st.markdown("### 🧪 Generated Hypotheses")
         for i, hypothesis in enumerate(result['hypotheses'], 1):
             st.markdown(f'<div class="hypothesis-box">{i}. {hypothesis}</div>', unsafe_allow_html=True)
@@ -267,6 +399,71 @@ def display_research_results(result: Dict[str, Any], index: int = 0):
         st.markdown("### 📋 Recommended Next Steps")
         for i, step in enumerate(result['next_steps'], 1):
             st.markdown(f"{i}. {step}")
+    
+    # Bibliography
+    bibliography = result.get('bibliography')
+    if bibliography and bibliography != "No sources available for bibliography.":
+        st.markdown("### 📖 Bibliography")
+        st.markdown(bibliography)
+    
+    # Detailed source information
+    sources = result.get('sources', [])
+    if sources:
+        st.markdown("### 📚 Detailed Source Information")
+        
+        for i, source in enumerate(sources, 1):
+            with st.expander(f"📄 Source {i}: {source.get('title', 'Unknown Title')}", expanded=False):
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    st.markdown(f"**Title:** {source.get('title', 'Unknown')}")
+                    
+                    authors = source.get('authors', [])
+                    if authors:
+                        authors_str = ", ".join(authors[:3])
+                        if len(authors) > 3:
+                            authors_str += f" and {len(authors) - 3} others"
+                        st.markdown(f"**Authors:** {authors_str}")
+                    
+                    if source.get('journal'):
+                        st.markdown(f"**Journal:** {source['journal']}")
+                    
+                    if source.get('published'):
+                        st.markdown(f"**Published:** {source['published']}")
+                    
+                    if source.get('abstract'):
+                        abstract = source['abstract'][:300] + "..." if len(source['abstract']) > 300 else source['abstract']
+                        st.markdown(f"**Abstract:** {abstract}")
+                
+                with col2:
+                    st.markdown(f"**Database:** {source.get('database', 'Unknown').title()}")
+                    
+                    # Clickable links
+                    if source.get('doi'):
+                        doi_url = f"https://doi.org/{source['doi']}"
+                        st.markdown(f"**DOI:** [🔗 {source['doi']}]({doi_url})")
+                    
+                    if source.get('url') and source.get('url') != source.get('doi'):
+                        st.markdown(f"**URL:** [🔗 View Paper]({source['url']})")
+                    
+                    if source.get('arxiv_id'):
+                        arxiv_url = f"https://arxiv.org/abs/{source['arxiv_id']}"
+                        st.markdown(f"**ArXiv:** [🔗 {source['arxiv_id']}]({arxiv_url})")
+                    
+                    if source.get('pmid'):
+                        pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/{source['pmid']}"
+                        st.markdown(f"**PubMed:** [🔗 {source['pmid']}]({pubmed_url})")
+    
+    # Paper IDs reference
+    paper_ids = result.get('paper_ids_referenced', [])
+    if paper_ids:
+        with st.expander(f"📋 Paper IDs Referenced ({len(paper_ids)} total)", expanded=False):
+            # Display as columns for better readability
+            if len(paper_ids) > 0:
+                cols = st.columns(min(3, len(paper_ids)))
+                for i, paper_id in enumerate(paper_ids):
+                    with cols[i % 3]:
+                        st.code(paper_id)
     
     # Download results
     if st.button("💾 Download Results", key=f"download_{index}"):

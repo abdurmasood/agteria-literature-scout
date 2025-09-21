@@ -75,12 +75,40 @@ class LiteratureScoutCLI:
             print(f"Timestamp: {result['timestamp']}")
             print(f"Papers Found: {result.get('papers_found', 0)}")
             
-            if result.get('novel_insights'):
+            # Display source attribution information
+            paper_ids = result.get('paper_ids_referenced', [])
+            if paper_ids:
+                print(f"📚 Sources Referenced: {len(paper_ids)} papers")
+                print(f"Paper IDs: {', '.join(paper_ids[:5])}{'...' if len(paper_ids) > 5 else ''}")
+            
+            # Display insights with sources
+            insights_with_sources = result.get('insights_with_sources', [])
+            if insights_with_sources:
+                print(f"\n💡 Novel Insights with Sources ({len(insights_with_sources)}):")
+                for i, insight_data in enumerate(insights_with_sources, 1):
+                    insight = insight_data.get('insight', '')
+                    source_ids = insight_data.get('source_ids', [])
+                    print(f"{i}. {insight}")
+                    if source_ids:
+                        print(f"   📄 Sources: [{', '.join(source_ids)}]")
+                    print()
+            elif result.get('novel_insights'):
                 print(f"\n💡 Novel Insights ({len(result['novel_insights'])}):")
                 for i, insight in enumerate(result['novel_insights'], 1):
                     print(f"{i}. {insight}")
             
-            if result.get('hypotheses'):
+            # Display hypotheses with sources
+            hypotheses_with_sources = result.get('hypotheses_with_sources', [])
+            if hypotheses_with_sources:
+                print(f"\n🧪 Generated Hypotheses with Sources ({len(hypotheses_with_sources)}):")
+                for i, hypothesis_data in enumerate(hypotheses_with_sources, 1):
+                    hypothesis = hypothesis_data.get('hypothesis', '')
+                    source_ids = hypothesis_data.get('source_ids', [])
+                    print(f"{i}. {hypothesis}")
+                    if source_ids:
+                        print(f"   📄 Sources: [{', '.join(source_ids)}]")
+                    print()
+            elif result.get('hypotheses'):
                 print(f"\n🧪 Generated Hypotheses ({len(result['hypotheses'])}):")
                 for i, hypothesis in enumerate(result['hypotheses'], 1):
                     print(f"{i}. {hypothesis}")
@@ -89,6 +117,29 @@ class LiteratureScoutCLI:
                 print(f"\n📋 Next Steps ({len(result['next_steps'])}):")
                 for i, step in enumerate(result['next_steps'], 1):
                     print(f"{i}. {step}")
+            
+            # Display bibliography if available
+            bibliography = result.get('bibliography')
+            if bibliography and bibliography != "No sources available for bibliography.":
+                print(f"\n📖 Bibliography:")
+                print(bibliography)
+            
+            # Display detailed source information
+            sources = result.get('sources', [])
+            if sources:
+                print(f"\n📚 Detailed Source Information ({len(sources)} sources):")
+                for i, source in enumerate(sources, 1):
+                    print(f"\n{i}. {source.get('title', 'Unknown Title')}")
+                    print(f"   Authors: {', '.join(source.get('authors', ['Unknown']))}")
+                    print(f"   Database: {source.get('database', 'Unknown').title()}")
+                    if source.get('journal'):
+                        print(f"   Journal: {source['journal']}")
+                    if source.get('published'):
+                        print(f"   Published: {source['published']}")
+                    if source.get('doi'):
+                        print(f"   DOI: {source['doi']}")
+                    elif source.get('url'):
+                        print(f"   URL: {source['url']}")
             
             print(f"\n📄 Full Response:")
             print(result['response'])
@@ -287,16 +338,158 @@ class LiteratureScoutCLI:
             logger.error(f"Error getting status: {e}")
             print(f"❌ Failed to get status: {e}")
     
+    def show_sources(self, query: Optional[str] = None, limit: int = 10) -> None:
+        """Show detailed source information and bibliography."""
+        if not self.scout:
+            logger.error("Literature Scout not initialized")
+            return
+        
+        try:
+            print("\n📚 Source Information")
+            print("=" * 30)
+            
+            if query:
+                # Search for specific papers
+                papers_with_sources = self.scout.memory.search_papers_with_sources(query, k=limit)
+                
+                if not papers_with_sources:
+                    print(f"No sources found for query: {query}")
+                    return
+                
+                print(f"Sources matching '{query}' ({len(papers_with_sources)} found):\n")
+                
+                for i, (paper, source_info) in enumerate(papers_with_sources, 1):
+                    print(f"{i}. {paper.metadata.get('title', 'Unknown Title')}")
+                    
+                    if source_info:
+                        print(f"   Authors: {', '.join(source_info.get('authors', ['Unknown']))}")
+                        print(f"   Database: {source_info.get('database', 'Unknown').title()}")
+                        if source_info.get('journal'):
+                            print(f"   Journal: {source_info['journal']}")
+                        if source_info.get('published'):
+                            print(f"   Published: {source_info['published']}")
+                        if source_info.get('doi'):
+                            print(f"   DOI: {source_info['doi']}")
+                        elif source_info.get('url'):
+                            print(f"   URL: {source_info['url']}")
+                        print(f"   Quality Score: {paper.metadata.get('quality_score', 'N/A')}")
+                    print()
+            else:
+                # Show bibliography for all sources
+                bibliography = self.scout.memory.generate_research_bibliography()
+                print("Complete Bibliography:\n")
+                print(bibliography)
+                
+                # Show summary statistics
+                citation_tracker = self.scout.memory.get_citation_tracker()
+                stats = citation_tracker.get_statistics()
+                
+                print(f"\n📊 Source Statistics:")
+                print(f"Total Sources: {stats['total_sources']}")
+                print(f"Total Insights: {stats['total_insights']}")
+                
+                if stats.get('sources_by_database'):
+                    print(f"\nSources by Database:")
+                    for db, count in stats['sources_by_database'].items():
+                        print(f"  {db.title()}: {count}")
+                
+                if stats.get('insights_by_type'):
+                    print(f"\nInsights by Type:")
+                    for itype, count in stats['insights_by_type'].items():
+                        print(f"  {itype.title()}: {count}")
+        
+        except Exception as e:
+            logger.error(f"Error showing sources: {e}")
+            print(f"❌ Failed to show sources: {e}")
+    
+    def simple_research(self, query: str) -> None:
+        """Conduct research using simplified mode (fallback)."""
+        if not self.scout:
+            logger.error("Literature Scout not initialized")
+            return
+        
+        try:
+            print(f"\n🔍 Simple Research Mode: {query}")
+            print("=" * 50)
+            print("⚠️ Using simplified research mode (reduced source attribution)")
+            
+            result = self.scout.conduct_simple_research(query)
+            
+            # Display results
+            print(f"\n📊 Simple Research Results:")
+            print(f"Query: {result['query']}")
+            print(f"Mode: {result.get('mode', 'simple')}")
+            print(f"Timestamp: {result['timestamp']}")
+            
+            if result.get('error'):
+                print(f"\n❌ Error: {result['error']}")
+                if result.get('troubleshooting_tips'):
+                    print(f"\n💡 Troubleshooting Tips:")
+                    for tip in result['troubleshooting_tips']:
+                        print(f"  • {tip}")
+            else:
+                print(f"\n📄 Research Summary:")
+                print(result.get('response', 'No response available'))
+            
+            # Save results
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = f"simple_research_{timestamp}.json"
+            with open(output_file, 'w') as f:
+                json.dump(result, f, indent=2)
+            
+            print(f"\n💾 Results saved to: {output_file}")
+            
+        except Exception as e:
+            logger.error(f"Error during simple research: {e}")
+            print(f"❌ Simple research failed: {e}")
+    
+    def test_functionality(self) -> None:
+        """Test basic agent functionality."""
+        if not self.scout:
+            logger.error("Literature Scout not initialized")
+            return
+        
+        try:
+            print(f"\n🧪 Testing Basic Agent Functionality...")
+            print("=" * 40)
+            
+            result = self.scout.test_basic_functionality()
+            
+            if result.get('test_status') == 'success':
+                print(f"✅ {result.get('message', 'Test passed')}")
+                print(f"\n📋 Test Details:")
+                print(f"Query: {result.get('test_query', 'N/A')}")
+                print(f"Response: {result.get('test_response', 'N/A')}")
+            else:
+                print(f"❌ {result.get('message', 'Test failed')}")
+                print(f"Error: {result.get('error', 'Unknown error')}")
+                
+                print(f"\n💡 Troubleshooting:")
+                print(f"  • Check OpenAI API key in .env file")
+                print(f"  • Verify internet connectivity")
+                print(f"  • Check system logs for detailed errors")
+            
+        except Exception as e:
+            logger.error(f"Error during functionality test: {e}")
+            print(f"❌ Functionality test failed: {e}")
+            print(f"\n💡 This suggests a fundamental configuration issue")
+            print(f"  • Verify OpenAI API key is set correctly")
+            print(f"  • Check that all dependencies are installed")
+            print(f"  • Try reinitializing the Literature Scout")
+    
     def interactive_mode(self) -> None:
         """Start interactive mode."""
         print("\n🤖 Literature Scout - Interactive Mode")
         print("=" * 40)
         print("Commands:")
         print("  research <query> - Conduct research")
+        print("  simple <query> - Simple research mode (fallback)")
+        print("  test - Test basic agent functionality")
         print("  scan - Perform daily scan")
         print("  breakthrough <findings> - Analyze breakthrough potential")
         print("  gaps <area> - Explore research gaps")
         print("  competitors <company1,company2> - Track competitors")
+        print("  sources [query] - Show sources and bibliography")
         print("  status - Show current status")
         print("  help - Show this help")
         print("  quit - Exit interactive mode")
@@ -319,10 +512,13 @@ class LiteratureScoutCLI:
                 elif cmd == 'help':
                     print("\nCommands:")
                     print("  research <query> - Conduct research")
+                    print("  simple <query> - Simple research mode (fallback)")
+                    print("  test - Test basic agent functionality")
                     print("  scan - Perform daily scan")
                     print("  breakthrough <findings> - Analyze breakthrough potential")
                     print("  gaps <area> - Explore research gaps")
                     print("  competitors <company1,company2> - Track competitors")
+                    print("  sources [query] - Show sources and bibliography")
                     print("  status - Show current status")
                     print("  help - Show this help")
                     print("  quit - Exit interactive mode")
@@ -331,6 +527,13 @@ class LiteratureScoutCLI:
                         self.search_research(args)
                     else:
                         print("❌ Please provide a research query")
+                elif cmd == 'simple':
+                    if args:
+                        self.simple_research(args)
+                    else:
+                        print("❌ Please provide a research query for simple mode")
+                elif cmd == 'test':
+                    self.test_functionality()
                 elif cmd == 'scan':
                     self.daily_scan()
                 elif cmd == 'breakthrough':
@@ -351,6 +554,9 @@ class LiteratureScoutCLI:
                         print("❌ Please provide competitor names (comma-separated)")
                 elif cmd == 'status':
                     self.show_status()
+                elif cmd == 'sources':
+                    # args is optional for sources command
+                    self.show_sources(args if args.strip() else None)
                 else:
                     print(f"❌ Unknown command: {cmd}. Type 'help' for available commands.")
                 
@@ -395,6 +601,11 @@ def main():
     
     # Status command
     subparsers.add_parser('status', help='Show Literature Scout status')
+    
+    # Sources command
+    sources_parser = subparsers.add_parser('sources', help='Show sources and bibliography')
+    sources_parser.add_argument('query', nargs='?', help='Optional query to search for specific sources')
+    sources_parser.add_argument('--limit', type=int, default=10, help='Maximum number of sources to show')
     
     # Interactive mode command
     subparsers.add_parser('interactive', help='Start interactive mode')
@@ -459,6 +670,9 @@ def main():
     
     elif args.command == 'status':
         cli.show_status()
+    
+    elif args.command == 'sources':
+        cli.show_sources(args.query, args.limit)
     
     elif args.command == 'interactive':
         cli.interactive_mode()
