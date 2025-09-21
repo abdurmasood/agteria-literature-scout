@@ -268,13 +268,14 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
         
         return agent_executor
     
-    def conduct_research(self, research_query: str, focus_areas: Optional[List[str]] = None) -> Dict[str, Any]:
+    def conduct_research(self, research_query: str, focus_areas: Optional[List[str]] = None, callbacks: Optional[List] = None) -> Dict[str, Any]:
         """
         Conduct comprehensive research on a query.
         
         Args:
             research_query: The research question or topic
             focus_areas: Optional specific areas to focus on
+            callbacks: Optional list of callback handlers for streaming
         
         Returns:
             Dictionary with research results and insights
@@ -290,8 +291,24 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
         try:
             logger.info(f"Starting agent execution for query: {research_query}")
             
-            # Run the agent with enhanced error handling
-            result = self.agent.invoke({"input": enhanced_query})
+            # Create a temporary agent executor with callbacks if provided
+            if callbacks:
+                # Create new agent executor with callbacks
+                temp_agent_executor = AgentExecutor(
+                    agent=self.agent.agent,
+                    tools=self.tools,
+                    memory=self.agent_memory,
+                    verbose=self.verbose,
+                    max_iterations=25,
+                    max_execution_time=600,
+                    handle_parsing_errors=True,
+                    early_stopping_method="generate",
+                    callbacks=callbacks
+                )
+                result = temp_agent_executor.invoke({"input": enhanced_query})
+            else:
+                # Use existing agent executor
+                result = self.agent.invoke({"input": enhanced_query})
             
             # Check if agent completed successfully
             agent_output = result.get("output", "")
@@ -424,12 +441,13 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
         logger.info("Daily research scan completed")
         return scan_results
     
-    def analyze_breakthrough_potential(self, research_findings: str) -> Dict[str, Any]:
+    def analyze_breakthrough_potential(self, research_findings: str, callbacks: Optional[List] = None) -> Dict[str, Any]:
         """
         Analyze the breakthrough potential of research findings.
         
         Args:
             research_findings: Description of research findings
+            callbacks: Optional list of callback handlers for streaming
         
         Returns:
             Dictionary with breakthrough analysis
@@ -450,14 +468,15 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
         Provide a comprehensive breakthrough assessment.
         """
         
-        return self.conduct_research(analysis_query, focus_areas=["breakthrough analysis"])
+        return self.conduct_research(analysis_query, focus_areas=["breakthrough analysis"], callbacks=callbacks)
     
-    def explore_research_gaps(self, research_area: str) -> Dict[str, Any]:
+    def explore_research_gaps(self, research_area: str, callbacks: Optional[List] = None) -> Dict[str, Any]:
         """
         Explore research gaps in a specific area.
         
         Args:
             research_area: Area of research to explore
+            callbacks: Optional list of callback handlers for streaming
         
         Returns:
             Dictionary with gap analysis and opportunities
@@ -475,7 +494,7 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
         Generate specific research hypotheses to fill these gaps.
         """
         
-        return self.conduct_research(gap_query, focus_areas=["gap analysis", "opportunity identification"])
+        return self.conduct_research(gap_query, focus_areas=["gap analysis", "opportunity identification"], callbacks=callbacks)
     
     def track_competitor_research(self, competitors: List[str]) -> Dict[str, Any]:
         """

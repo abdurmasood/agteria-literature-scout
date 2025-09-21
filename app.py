@@ -21,6 +21,10 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from src.config import Config
 from src.agents.literature_scout import LiteratureScout
 from src.utils.report_generator import ReportGenerator
+from src.callbacks.streamlit_callback import StreamlitCallbackHandler
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Configure page
 st.set_page_config(
@@ -192,36 +196,78 @@ def research_page():
     
     # Handle research submission
     if submitted and query:
-        with st.spinner(f"Researching: {query}..."):
+        # Create streaming UI containers
+        st.markdown("---")
+        st.markdown("### 🔬 Research Progress")
+        
+        # Create containers for streaming
+        status_container = st.empty()
+        with st.expander("📋 Research Steps", expanded=False):
+            history_container = st.empty()
+        
+        # Initialize session state for streaming
+        if 'streaming_active' not in st.session_state:
+            st.session_state.streaming_active = False
+        
+        try:
+            # Create callback handler with error handling
             try:
-                result = st.session_state.scout.conduct_research(query, focus_areas)
-                
-                # Check if agent hit limits
-                if result.get('error') == "Agent execution incomplete":
-                    st.warning("⚠️ Research agent hit time/iteration limits")
-                    
-                    if result.get('troubleshooting_tips'):
-                        st.markdown("### 💡 Troubleshooting Tips:")
-                        for tip in result['troubleshooting_tips']:
-                            st.markdown(f"- {tip}")
-                else:
-                    # Store in history
-                    st.session_state.research_history.append({
-                        'timestamp': datetime.now(),
-                        'query': query,
-                        'result': result
-                    })
-                    
-                    # Display results
-                    display_research_results(result, 0)
-                
+                callback = StreamlitCallbackHandler(
+                    status_container=status_container,
+                    history_container=history_container,
+                    max_history=20,
+                    update_throttle=0.3  # Faster updates for better UX
+                )
+                callbacks = [callback]
             except Exception as e:
-                st.error(f"❌ Research failed: {e}")
-                st.markdown("### 💡 Troubleshooting Tips:")
-                st.markdown("- Check OpenAI API key in .env file")
-                st.markdown("- Verify internet connectivity")
-                st.markdown("- Check system logs for detailed errors")
-                st.markdown("- Try a different or more specific query")
+                logger.warning(f"Failed to create streaming callback: {e}")
+                st.warning("⚠️ Streaming disabled due to initialization error")
+                callbacks = None
+            
+            # Set streaming state
+            st.session_state.streaming_active = True
+            
+            # Conduct research with streaming (fallback to no streaming if callback failed)
+            result = st.session_state.scout.conduct_research(
+                query, 
+                focus_areas, 
+                callbacks=callbacks
+            )
+            
+            # Clear streaming state
+            st.session_state.streaming_active = False
+            
+            # Check if agent hit limits
+            if result.get('error') == "Agent execution incomplete":
+                st.warning("⚠️ Research agent hit time/iteration limits")
+                
+                if result.get('troubleshooting_tips'):
+                    st.markdown("### 💡 Troubleshooting Tips:")
+                    for tip in result['troubleshooting_tips']:
+                        st.markdown(f"- {tip}")
+            else:
+                # Store in history
+                st.session_state.research_history.append({
+                    'timestamp': datetime.now(),
+                    'query': query,
+                    'result': result
+                })
+                
+                # Display final results
+                st.markdown("---")
+                st.markdown("### 📊 Research Results")
+                display_research_results(result, 0)
+            
+        except Exception as e:
+            # Clear streaming state on error
+            st.session_state.streaming_active = False
+            
+            st.error(f"❌ Research failed: {e}")
+            st.markdown("### 💡 Troubleshooting Tips:")
+            st.markdown("- Check OpenAI API key in .env file")
+            st.markdown("- Verify internet connectivity")
+            st.markdown("- Check system logs for detailed errors")
+            st.markdown("- Try a different or more specific query")
     
     # Research history
     if st.session_state.research_history:
@@ -479,28 +525,45 @@ def breakthrough_analysis_page():
         submitted = st.form_submit_button("🚀 Analyze Breakthrough Potential", use_container_width=True)
     
     if submitted and findings:
-        with st.spinner("Analyzing breakthrough potential..."):
-            try:
-                result = st.session_state.scout.analyze_breakthrough_potential(findings)
-                
-                # Display analysis
-                st.markdown("### 🎯 Breakthrough Analysis")
-                st.markdown(result.get('response', 'No analysis available'))
-                
-                # Additional insights
-                if result.get('novel_insights'):
-                    st.markdown("### 💡 Key Insights")
-                    for insight in result['novel_insights']:
-                        st.markdown(f"- {insight}")
-                
-                # Recommendations
-                if result.get('next_steps'):
-                    st.markdown("### 📋 Recommendations")
-                    for step in result['next_steps']:
-                        st.markdown(f"• {step}")
-                
-            except Exception as e:
-                st.error(f"❌ Analysis failed: {e}")
+        # Create streaming UI containers
+        st.markdown("---")
+        st.markdown("### 🔬 Analysis Progress")
+        
+        # Create containers for streaming
+        status_container = st.empty()
+        with st.expander("📋 Analysis Steps", expanded=False):
+            history_container = st.empty()
+        
+        try:
+            # Create callback handler
+            callback = StreamlitCallbackHandler(
+                status_container=status_container,
+                history_container=history_container,
+                max_history=15
+            )
+            
+            # Analyze with streaming
+            result = st.session_state.scout.analyze_breakthrough_potential(findings, callbacks=[callback])
+            
+            # Display analysis
+            st.markdown("---")
+            st.markdown("### 🎯 Breakthrough Analysis")
+            st.markdown(result.get('response', 'No analysis available'))
+            
+            # Additional insights
+            if result.get('novel_insights'):
+                st.markdown("### 💡 Key Insights")
+                for insight in result['novel_insights']:
+                    st.markdown(f"- {insight}")
+            
+            # Recommendations
+            if result.get('next_steps'):
+                st.markdown("### 📋 Recommendations")
+                for step in result['next_steps']:
+                    st.markdown(f"• {step}")
+            
+        except Exception as e:
+            st.error(f"❌ Analysis failed: {e}")
 
 def gap_explorer_page():
     """Research gap exploration page."""
@@ -518,28 +581,45 @@ def gap_explorer_page():
         submitted = st.form_submit_button("🔍 Explore Research Gaps", use_container_width=True)
     
     if submitted and research_area:
-        with st.spinner(f"Exploring research gaps in {research_area}..."):
-            try:
-                result = st.session_state.scout.explore_research_gaps(research_area)
-                
-                # Display gap analysis
-                st.markdown("### 🎯 Gap Analysis")
-                st.markdown(result.get('response', 'No analysis available'))
-                
-                # Identified opportunities
-                if result.get('novel_insights'):
-                    st.markdown("### 🔬 Identified Opportunities")
-                    for insight in result['novel_insights']:
-                        st.markdown(f"- {insight}")
-                
-                # Generated hypotheses
-                if result.get('hypotheses'):
-                    st.markdown("### 💡 Research Hypotheses to Fill Gaps")
-                    for hypothesis in result['hypotheses']:
-                        st.markdown(f"- {hypothesis}")
-                
-            except Exception as e:
-                st.error(f"❌ Gap exploration failed: {e}")
+        # Create streaming UI containers
+        st.markdown("---")
+        st.markdown("### 🔬 Gap Exploration Progress")
+        
+        # Create containers for streaming
+        status_container = st.empty()
+        with st.expander("📋 Exploration Steps", expanded=False):
+            history_container = st.empty()
+        
+        try:
+            # Create callback handler
+            callback = StreamlitCallbackHandler(
+                status_container=status_container,
+                history_container=history_container,
+                max_history=15
+            )
+            
+            # Explore gaps with streaming
+            result = st.session_state.scout.explore_research_gaps(research_area, callbacks=[callback])
+            
+            # Display gap analysis
+            st.markdown("---")
+            st.markdown("### 🎯 Gap Analysis")
+            st.markdown(result.get('response', 'No analysis available'))
+            
+            # Identified opportunities
+            if result.get('novel_insights'):
+                st.markdown("### 🔬 Identified Opportunities")
+                for insight in result['novel_insights']:
+                    st.markdown(f"- {insight}")
+            
+            # Generated hypotheses
+            if result.get('hypotheses'):
+                st.markdown("### 💡 Research Hypotheses to Fill Gaps")
+                for hypothesis in result['hypotheses']:
+                    st.markdown(f"- {hypothesis}")
+            
+        except Exception as e:
+            st.error(f"❌ Gap exploration failed: {e}")
 
 def competitor_tracking_page():
     """Competitor tracking page."""
