@@ -20,9 +20,9 @@ class Config:
     TEMPERATURE: float = 0.7
     
     # Search Configuration
-    MAX_ARXIV_RESULTS: int = 10
-    MAX_PUBMED_RESULTS: int = 10
-    MAX_WEB_RESULTS: int = 5
+    MAX_ARXIV_RESULTS: int = 15
+    MAX_PUBMED_RESULTS: int = 15
+    MAX_WEB_RESULTS: int = 15
     
     # Document Processing
     CHUNK_SIZE: int = 1000
