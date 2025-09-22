@@ -3,6 +3,7 @@ langchain-openai>=0.1.0,<0.2.0
 langchain-community>=0.2.0,<0.3.0
 langchain-chroma>=0.1.0,<0.2.0
 langchain-text-splitters>=0.2.0,<0.3.0
+langgraph>=0.2.0
 arxiv==2.1.0
 biopython==1.83
 chromadb>=0.4.24,<0.5.0

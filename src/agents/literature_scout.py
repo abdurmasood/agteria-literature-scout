@@ -18,6 +18,7 @@ from ..tools.analysis_tools import create_langchain_analysis_tools
 from ..tools.hypothesis_tools import create_langchain_hypothesis_tools
 from ..memory.research_memory import ResearchMemory, KnowledgeGraph
 from ..processors.document_processor import DocumentProcessor
+from .breakthrough_analyzer import BreakthroughAnalyzer
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -60,6 +61,12 @@ class LiteratureScout:
         
         # Create the agent
         self.agent = self._create_agent()
+        
+        # Initialize breakthrough analyzer (LangGraph-based)
+        self.breakthrough_analyzer = BreakthroughAnalyzer(
+            memory=self.memory,
+            verbose=verbose
+        )
         
         # Initialize session state
         self.session_state = {
@@ -443,7 +450,7 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
     
     def analyze_breakthrough_potential(self, research_findings: str, callbacks: Optional[List] = None) -> Dict[str, Any]:
         """
-        Analyze the breakthrough potential of research findings.
+        Analyze the breakthrough potential of research findings using LangGraph.
         
         Args:
             research_findings: Description of research findings
@@ -452,23 +459,43 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!
         Returns:
             Dictionary with breakthrough analysis
         """
-        analysis_query = f"""
-        Analyze the breakthrough potential of these research findings for Agteria's methane reduction goals:
+        logger.info(f"Starting breakthrough analysis with LangGraph for: {research_findings[:100]}...")
         
-        {research_findings}
-        
-        Consider:
-        1. Technical feasibility and scalability
-        2. Commercial viability and cost-effectiveness
-        3. Competitive advantages
-        4. Timeline to implementation
-        5. Risk factors and mitigation strategies
-        6. Market impact potential
-        
-        Provide a comprehensive breakthrough assessment.
-        """
-        
-        return self.conduct_research(analysis_query, focus_areas=["breakthrough analysis"], callbacks=callbacks)
+        try:
+            # Use the new LangGraph-based breakthrough analyzer
+            result = self.breakthrough_analyzer.analyze_breakthrough_potential(
+                research_findings=research_findings,
+                callbacks=callbacks
+            )
+            
+            logger.info("Breakthrough analysis completed successfully with LangGraph")
+            return result
+            
+        except Exception as e:
+            logger.error(f"LangGraph breakthrough analysis failed, attempting fallback: {e}")
+            
+            # Fallback to direct LLM analysis if LangGraph fails
+            try:
+                fallback_result = self._fallback_breakthrough_analysis(research_findings)
+                fallback_result["fallback_used"] = True
+                fallback_result["original_error"] = str(e)
+                return fallback_result
+                
+            except Exception as fallback_error:
+                logger.error(f"Fallback analysis also failed: {fallback_error}")
+                return {
+                    "research_findings": research_findings,
+                    "error": f"Both LangGraph and fallback analysis failed. LangGraph error: {str(e)}, Fallback error: {str(fallback_error)}",
+                    "status": "failed",
+                    "timestamp": datetime.now().isoformat(),
+                    "troubleshooting": [
+                        "Check that langgraph is installed: pip install langgraph>=0.2.0",
+                        "Verify OpenAI API key is working and has sufficient credits",
+                        "Check internet connectivity for research tool access",
+                        "Try with simpler, more focused research findings",
+                        "Contact support if the issue persists"
+                    ]
+                }
     
     def explore_research_gaps(self, research_area: str, callbacks: Optional[List] = None) -> Dict[str, Any]:
         """
@@ -944,6 +971,69 @@ Final Answer: [your research summary]
                     "Check system logs for detailed errors"
                 ]
             }
+
+    def _fallback_breakthrough_analysis(self, research_findings: str) -> Dict[str, Any]:
+        """Fallback breakthrough analysis using direct LLM call."""
+        logger.info("Using fallback breakthrough analysis")
+        
+        fallback_prompt = f"""
+        Analyze the breakthrough potential of these research findings for Agteria Biotech's methane reduction mission:
+        
+        RESEARCH FINDINGS:
+        {research_findings}
+        
+        Provide a structured breakthrough analysis:
+        
+        ## 🚀 Breakthrough Potential Analysis
+        
+        ### Executive Summary
+        [Brief assessment of the opportunity and recommendation]
+        
+        ### Technical Feasibility (Score: 1-10)
+        - **Readiness Level**: [Assessment of technical maturity]
+        - **Scalability**: [Can this be implemented at commercial scale?]
+        - **Key Challenges**: [Major technical hurdles]
+        
+        ### Commercial Viability (Score: 1-10)  
+        - **Market Opportunity**: [Size and urgency of market need]
+        - **Customer Value**: [Why would customers adopt this?]
+        - **Revenue Potential**: [Realistic revenue projections]
+        
+        ### Competitive Landscape (Score: 1-10)
+        - **Existing Solutions**: [What alternatives exist?]
+        - **Unique Advantages**: [What makes this better?]
+        - **Competitive Threats**: [Who could compete?]
+        
+        ### Investment Recommendation: [PROCEED/CAUTIOUS/PASS]
+        
+        ### Timeline to Market
+        - **Phase 1 (0-12 months)**: [Immediate next steps]
+        - **Phase 2 (1-2 years)**: [Development phase]
+        - **Phase 3 (2-3 years)**: [Market entry]
+        
+        ### Key Risk Factors
+        1. [Primary risk and mitigation]
+        2. [Secondary risk and mitigation]  
+        3. [Tertiary risk and mitigation]
+        
+        Focus on practical business considerations for Agteria's climate technology mission.
+        """
+        
+        try:
+            result = self.llm.invoke(fallback_prompt)
+            
+            return {
+                "research_findings": research_findings,
+                "analysis_response": result.content,
+                "response": result.content,  # For Streamlit compatibility
+                "analysis_type": "breakthrough_potential_fallback",
+                "status": "completed",
+                "timestamp": datetime.now().isoformat(),
+                "method": "fallback_llm_analysis"
+            }
+            
+        except Exception as e:
+            raise Exception(f"Fallback analysis failed: {str(e)}")
 
     def get_agent_status(self) -> Dict[str, Any]:
         """Get current status of the agent."""
