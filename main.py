@@ -17,7 +17,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from src.config import Config
-from src.agents.literature_scout import LiteratureScout
+from src.agents.unified_scout import UnifiedLiteratureScout
 from src.utils.report_generator import ReportGenerator
 
 # Set up logging
@@ -47,7 +47,7 @@ class LiteratureScoutCLI:
                 return False
             
             # Initialize components
-            self.scout = LiteratureScout(verbose=True)
+            self.scout = UnifiedLiteratureScout(verbose=True)
             self.report_generator = ReportGenerator()
             
             logger.info("Literature Scout initialized successfully")

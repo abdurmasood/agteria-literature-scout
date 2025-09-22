@@ -19,7 +19,7 @@ from typing import Dict, List, Any, Optional
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from src.config import Config
-from src.agents.literature_scout import LiteratureScout
+from src.agents.unified_scout import UnifiedLiteratureScout
 from src.utils.report_generator import ReportGenerator
 from src.callbacks.streamlit_callback import StreamlitCallbackHandler
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Configure page
 st.set_page_config(
     page_title="Agteria Literature Scout",
-    page_icon="🔬",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -95,7 +95,7 @@ def initialize_scout():
                 return False
             
             # Initialize components
-            st.session_state.scout = LiteratureScout(verbose=False)
+            st.session_state.scout = UnifiedLiteratureScout(verbose=False)
             st.session_state.report_generator = ReportGenerator()
             st.session_state.scout_initialized = True
             

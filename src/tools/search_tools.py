@@ -299,18 +299,19 @@ class SearchOrchestrator:
         return all_results
 
 # Create tool instances for LangChain
-def create_langchain_search_tools() -> List[Tool]:
+def create_langchain_search_tools(citation_tracker=None) -> List[Tool]:
     """Create LangChain-compatible tool instances."""
     
     from ..utils.citation_tracker import CitationTracker
     
     orchestrator = SearchOrchestrator()
     
-    # Use a global citation tracker to persist across searches
-    global _global_citation_tracker
-    if '_global_citation_tracker' not in globals():
-        _global_citation_tracker = CitationTracker()
-    citation_tracker = _global_citation_tracker
+    # Use provided citation tracker or fall back to global one
+    if citation_tracker is None:
+        global _global_citation_tracker
+        if '_global_citation_tracker' not in globals():
+            _global_citation_tracker = CitationTracker()
+        citation_tracker = _global_citation_tracker
     
     def arxiv_search_func(query: str) -> str:
         """Search ArXiv, store papers, and return results with paper IDs."""
