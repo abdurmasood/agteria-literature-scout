@@ -19,6 +19,20 @@ class Config:
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     TEMPERATURE: float = 0.7
     
+    # Agent Configuration
+    LANGGRAPH_RECURSION_LIMIT: int = 50  # Increased from default 25
+    LANGGRAPH_MAX_ITERATIONS: int = 30   # Explicit iteration limit
+    
+    # Temperature Configuration for Different Tasks
+    ANALYSIS_TEMPERATURE: float = 0.6    # For paper analysis (increased from 0.3)
+    HYPOTHESIS_TEMPERATURE: float = 0.85 # For hypothesis generation
+    SCORING_TEMPERATURE: float = 0.3     # For relevance scoring (keep low)
+    
+    # Output Configuration
+    MIN_INSIGHTS_COUNT: int = 8          # Minimum insights to generate
+    MIN_HYPOTHESES_COUNT: int = 10       # Minimum hypotheses to generate
+    MIN_NEXT_STEPS_COUNT: int = 5        # Minimum action steps
+    
     # Search Configuration
     MAX_ARXIV_RESULTS: int = 15
     MAX_PUBMED_RESULTS: int = 15

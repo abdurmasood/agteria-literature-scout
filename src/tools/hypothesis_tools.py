@@ -20,7 +20,7 @@ class HypothesisGenerator:
     def __init__(self):
         self.llm = ChatOpenAI(
             model=Config.DEFAULT_MODEL,
-            temperature=0.8,  # Higher temperature for creativity
+            temperature=Config.HYPOTHESIS_TEMPERATURE,  # Optimized temperature for hypothesis generation
             openai_api_key=Config.OPENAI_API_KEY
         )
         
@@ -37,7 +37,7 @@ class HypothesisGenerator:
             
             TARGET APPLICATION: {target_application}
             
-            Generate 3-5 innovative hypotheses that combine concepts from both domains.
+            Generate 8-10 innovative hypotheses that combine concepts from both domains.
             
             For each hypothesis:
             1. HYPOTHESIS STATEMENT: Clear, testable hypothesis
@@ -71,7 +71,7 @@ class HypothesisGenerator:
             3. How could the mechanism be adapted or modified?
             4. What would be the predicted outcomes?
             
-            Provide 3-4 hypotheses with:
+            Provide 6-8 hypotheses with:
             - Analogy explanation
             - Adapted mechanism description  
             - Predicted outcomes
@@ -461,7 +461,7 @@ class IdeationEngine:
     def __init__(self):
         self.llm = ChatOpenAI(
             model=Config.DEFAULT_MODEL,
-            temperature=0.9,  # Very high temperature for maximum creativity
+            temperature=Config.HYPOTHESIS_TEMPERATURE + 0.05,  # Slightly higher than hypothesis generation for maximum creativity
             openai_api_key=Config.OPENAI_API_KEY
         )
     
@@ -488,7 +488,7 @@ class IdeationEngine:
         - Science fiction concepts that could become reality
         - Artistic or cultural approaches
         
-        Generate 5-7 wildly creative but potentially feasible ideas:
+        Generate 10-15 wildly creative but potentially feasible ideas:
         
         For each idea:
         1. WILD IDEA: The unconventional concept

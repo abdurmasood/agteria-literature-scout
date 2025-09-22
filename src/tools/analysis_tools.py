@@ -21,7 +21,7 @@ class PaperAnalyzer:
     def __init__(self):
         self.llm = ChatOpenAI(
             model=Config.DEFAULT_MODEL,
-            temperature=Config.TEMPERATURE,
+            temperature=Config.ANALYSIS_TEMPERATURE,  # Increased from 0.3 to 0.6 for more creative analysis
             openai_api_key=Config.OPENAI_API_KEY
         )
         
@@ -85,7 +85,7 @@ class PaperAnalyzer:
             
             Domain Context: {domain}
             
-            Generate 3-5 specific, testable hypotheses that:
+            Generate 8-12 specific, testable hypotheses that:
             1. Build on the research findings
             2. Are relevant to cattle methane reduction
             3. Could be practically implemented
@@ -319,7 +319,7 @@ class RelevanceScorer:
     def __init__(self):
         self.llm = ChatOpenAI(
             model=Config.DEFAULT_MODEL,
-            temperature=0.3,  # Lower temperature for consistent scoring
+            temperature=Config.SCORING_TEMPERATURE,  # Keep low temperature for consistent scoring
             openai_api_key=Config.OPENAI_API_KEY
         )
         

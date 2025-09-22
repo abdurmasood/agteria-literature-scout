@@ -59,7 +59,7 @@ class ResearchCapability(CapabilityModule):
         # Create memory checkpointer for stateful execution
         checkpointer = MemorySaver()
         
-        # Create LangGraph agent
+        # Create LangGraph agent with increased limits for complex research
         agent = create_react_agent(
             model=llm,
             tools=self.tools,
@@ -106,21 +106,45 @@ KEY PRIORITIES FOR AGTERIA:
 - Breakthrough molecular discoveries
 
 FINAL ANSWER STRUCTURE:
+🚨 CRITICAL: Generate comprehensive output with minimum quantities specified below.
 Your final response must be formatted as clean markdown with the following sections:
 ## Overview
 Overview of the research query and the main findings.
 
 ## 💡 Novel Insights
+Generate at least 8-10 distinct insights with proper citations:
 1. First insight with [ID: paper_id] citation
 2. Second insight with [ID: paper_id] citation
+3. Third insight with [ID: paper_id] citation
+4. Fourth insight with [ID: paper_id] citation
+5. Fifth insight with [ID: paper_id] citation
+6. Sixth insight with [ID: paper_id] citation
+7. Seventh insight with [ID: paper_id] citation
+8. Eighth insight with [ID: paper_id] citation
+[Continue with additional insights as discovered]
 
 ## 🧪 Generated Hypotheses
+Generate at least 10-12 hypotheses with supporting citations:
 1. First hypothesis with supporting [ID: paper_id] citations
 2. Second hypothesis with supporting [ID: paper_id] citations
+3. Third hypothesis with supporting [ID: paper_id] citations
+4. Fourth hypothesis with supporting [ID: paper_id] citations
+5. Fifth hypothesis with supporting [ID: paper_id] citations
+6. Sixth hypothesis with supporting [ID: paper_id] citations
+7. Seventh hypothesis with supporting [ID: paper_id] citations
+8. Eighth hypothesis with supporting [ID: paper_id] citations
+9. Ninth hypothesis with supporting [ID: paper_id] citations
+10. Tenth hypothesis with supporting [ID: paper_id] citations
+[Continue with additional hypotheses]
 
 ## 📋 Recommended Next Steps
+Provide at least 5-7 actionable next steps:
 1. First action step with relevant source references
 2. Second action step with relevant source references
+3. Third action step with relevant source references
+4. Fourth action step with relevant source references
+5. Fifth action step with relevant source references
+[Continue with additional next steps]
 
 ## 📖 Source Summary
 List of all Paper IDs referenced with their titles
@@ -161,9 +185,12 @@ Begin your research and remember: NO CLAIM WITHOUT CITATION!"""
                 "research_start_time": datetime.now().isoformat()
             })
             
-            # Create unique thread ID for this research session
+            # Create unique thread ID for this research session with increased limits
             thread_id = f"research_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            config = {"configurable": {"thread_id": thread_id}}
+            config = {
+                "configurable": {"thread_id": thread_id},
+                "recursion_limit": Config.LANGGRAPH_RECURSION_LIMIT
+            }
             
             # Enhance query with Agteria context and create research message
             enhanced_query = self._enhance_query_with_context(query, focus_areas)

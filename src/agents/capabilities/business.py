@@ -102,9 +102,12 @@ class BusinessCapability(CapabilityModule):
             
             logger.info(f"Starting business analysis for: {research_findings[:100]}...")
             
-            # Create unique thread ID for this analysis
+            # Create unique thread ID for this analysis with increased limits
             thread_id = f"business_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            config = {"configurable": {"thread_id": thread_id}}
+            config = {
+                "configurable": {"thread_id": thread_id},
+                "recursion_limit": Config.LANGGRAPH_RECURSION_LIMIT
+            }
             
             # Create focused business analysis prompt
             analysis_prompt = self._create_business_prompt(research_findings)
